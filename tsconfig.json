@@ -10,8 +10,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"],
-    "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src", "server", "tests", "scripts"],
   "exclude": ["node_modules", "dist"]
