@@ -4,6 +4,8 @@ import cors from 'cors';
 import { getConfig } from './config';
 import { attachWsServer } from './ws/wsServer';
 import { requireAuth } from './utils/tokens';
+import { ConversationIndex } from './db/conversationIndex';
+import { createProjectsRouter } from './routes/projects';
 
 const config = getConfig();
 const app = express();
@@ -20,7 +22,10 @@ if (config.token) {
   app.use('/api', requireAuth(config.token));
 }
 
-// Placeholder for /api/projects, /api/settings/* routers (Tasks 4-6, 13)
+// Bootstrap conversation index and routers
+const index = new ConversationIndex();
+index.load();
+app.use('/api', createProjectsRouter(index));
 
 const httpServer = http.createServer(app);
 attachWsServer(httpServer, config.token);
