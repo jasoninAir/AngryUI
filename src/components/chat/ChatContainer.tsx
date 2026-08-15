@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useConversation } from '@/hooks/useConversation';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
+import { WebTTYModal } from '../tui/WebTTYModal';
 
 const MODELS = [
   'Gemini 3.7 Flash (High)',
@@ -13,8 +14,22 @@ const MODELS = [
 ];
 
 export function ChatContainer({ conversationId }: { conversationId: string }) {
-  const { messages, status, send, cancel } = useConversation(conversationId);
+  const {
+    messages,
+    status,
+    send,
+    cancel,
+    interactivePrompt,
+    clearInteractivePrompt
+  } = useConversation(conversationId);
   const [model, setModel] = useState(MODELS[0]);
+  const [showTty, setShowTty] = useState(false);
+
+  // Auto-open WebTTY when AGY is waiting for an interactive prompt
+  // (ask_permission / ask_question produces `step_type: "unknown"` on the server).
+  useEffect(() => {
+    if (interactivePrompt) setShowTty(true);
+  }, [interactivePrompt]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -29,10 +44,25 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             <option key={m}>{m}</option>
           ))}
         </select>
-        <span className="ml-auto text-xs text-muted-foreground">{status}</span>
+        <button
+          onClick={() => setShowTty(true)}
+          className="ml-auto text-xs text-muted-foreground hover:text-foreground border border-border rounded px-2 py-1"
+        >
+          Open WebTTY
+        </button>
+        <span className="text-xs text-muted-foreground">{status}</span>
       </div>
       <MessageList messages={messages} />
       <ChatInput onSend={(text) => send(text, model)} onCancel={cancel} status={status} />
+      {showTty && (
+        <WebTTYModal
+          conversationId={conversationId}
+          onClose={() => {
+            setShowTty(false);
+            clearInteractivePrompt();
+          }}
+        />
+      )}
     </div>
   );
 }

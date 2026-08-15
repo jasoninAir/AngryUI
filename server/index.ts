@@ -6,6 +6,7 @@ import { attachWsServer } from './ws/wsServer';
 import { requireAuth } from './utils/tokens';
 import { ConversationIndex } from './db/conversationIndex';
 import { createProjectsRouter } from './routes/projects';
+import { createSettingsRouter } from './routes/settings';
 import { DiscoveryService } from './services/discoveryService';
 
 const config = getConfig();
@@ -27,6 +28,7 @@ if (config.token) {
 const index = new ConversationIndex();
 index.load();
 app.use('/api', createProjectsRouter(index));
+app.use('/api', createSettingsRouter());
 
 // Start the discovery service to watch conversation_summaries.db and history.jsonl.
 // Logs deltas; in later phases, this will broadcast over WebSocket.

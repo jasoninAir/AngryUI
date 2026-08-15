@@ -2,6 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { Server as HTTPServer } from 'http';
 import { checkToken } from '../utils/tokens';
 import { handleChatConnection } from './handlers/chatHandler';
+import { handleTuiConnection } from './handlers/tuiHandler';
 import { ConversationIndex } from '../db/conversationIndex';
 
 export function attachWsServer(
@@ -29,7 +30,8 @@ export function attachWsServer(
   wss.on('connection', (ws: WebSocket, req: any) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname.startsWith('/ws/tui/')) {
-      // TUI handler is mounted in Task 15
+      const conversationId = url.pathname.replace('/ws/tui/', '');
+      handleTuiConnection(ws, conversationId);
       return;
     }
     handleChatConnection(ws, index);
