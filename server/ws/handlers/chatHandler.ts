@@ -1,6 +1,8 @@
 import { WebSocket } from 'ws';
 import { TurnRunner } from '../../services/turnRunner';
 import { ConversationIndex } from '../../db/conversationIndex';
+import { AgyEvent } from '../../utils/streamParser';
+import { conversationHub } from '../conversationHub';
 
 interface ClientMsg {
   type: string;
@@ -20,9 +22,40 @@ const TURN_TIMEOUT_MS = 5 * 60 * 1000;
 export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): void {
   const runner = new TurnRunner();
   const activeTurns = new Map<string, { abort: () => void }>();
+  const subscriptions = new Map<string, () => void>();
 
   const send = (msg: ServerMsg) => {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
+  };
+
+  /**
+   * Subscribe to a conversation's events on the hub and forward them to the
+   * WebSocket. This decouples event publication from one connection so that
+   * multi-device / reconnect flows work.
+   */
+  const subscribeConversation = (convId: string) => {
+    if (subscriptions.has(convId)) return;
+    const unsubscribe = conversationHub.subscribe(convId, (event: AgyEvent) => {
+      if (event.type === 'step_update' && event.step_type === 'unknown') {
+        send({
+          type: 'chat:interactive_prompt',
+          conversationId: convId,
+          payload: { reason: 'unknown_step' },
+          timestamp: Date.now()
+        });
+      } else {
+        send({ type: 'chat:stream', conversationId: convId, payload: event, timestamp: Date.now() });
+      }
+    });
+    subscriptions.set(convId, unsubscribe);
+  };
+
+  const unsubscribeConversation = (convId: string) => {
+    const u = subscriptions.get(convId);
+    if (u) {
+      u();
+      subscriptions.delete(convId);
+    }
   };
 
   ws.on('message', (data) => {
@@ -33,9 +66,28 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       return;
     }
 
+    if (msg.type === 'chat:subscribe' && msg.conversationId) {
+      subscribeConversation(msg.conversationId);
+      send({
+        type: 'session:status',
+        conversationId: msg.conversationId,
+        payload: { state: 'IDLE' },
+        timestamp: Date.now()
+      });
+      return;
+    }
+
+    if (msg.type === 'chat:unsubscribe' && msg.conversationId) {
+      unsubscribeConversation(msg.conversationId);
+      return;
+    }
+
     if (msg.type === 'chat:send' && msg.conversationId && msg.payload) {
       const convId = msg.conversationId;
       const { message, model, effort, dangerouslySkipPermissions } = msg.payload;
+
+      // Subscribe the sender to the hub so they receive stream events
+      subscribeConversation(convId);
 
       const handle = runner.spawn({
         conversationId: convId,
@@ -54,16 +106,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       (async () => {
         try {
           for await (const ev of handle.events) {
-            if (ev.type === 'step_update' && ev.step_type === 'unknown') {
-              send({
-                type: 'chat:interactive_prompt',
-                conversationId: convId,
-                payload: { reason: 'unknown_step' },
-                timestamp: Date.now()
-              });
-            } else {
-              send({ type: 'chat:stream', conversationId: convId, payload: ev, timestamp: Date.now() });
-            }
+            conversationHub.publish(convId, ev);
           }
           send({ type: 'chat:done', conversationId: convId, payload: {}, timestamp: Date.now() });
         } catch (e: any) {
@@ -93,6 +136,9 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
   });
 
   ws.on('close', () => {
-    // Do NOT abort active turns — server keeps processes alive in background.
+    // Unsubscribe from all conversations, but DO NOT abort active turns.
+    // Hub keeps the process alive for other subscribers (multi-device).
+    for (const u of subscriptions.values()) u();
+    subscriptions.clear();
   });
 }

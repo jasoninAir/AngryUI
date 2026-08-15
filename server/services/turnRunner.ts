@@ -1,5 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { parseStreamLine, AgyEvent } from '../utils/streamParser';
+import { getConfig } from '../config';
 
 export interface TurnOptions {
   conversationId: string;
@@ -26,7 +27,7 @@ export class TurnRunner {
       '--print', opts.message
     ];
 
-    const child: ChildProcessWithoutNullStreams = spawn('agy', args, {
+    const child: ChildProcessWithoutNullStreams = spawn(getConfig().agyBin, args, {
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -41,6 +42,8 @@ export class TurnRunner {
     };
 
     let buffer = '';
+    let stderrBuffer = '';
+
     child.stdout.on('data', (chunk: Buffer) => {
       buffer += chunk.toString();
       let idx;
@@ -52,10 +55,19 @@ export class TurnRunner {
       }
     });
 
-    child.on('close', () => {
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderrBuffer += chunk.toString();
+    });
+
+    child.on('close', (code) => {
+      // Flush any remaining stdout buffer
       if (buffer.trim()) {
         const evt = parseStreamLine(buffer);
         if (evt) push(evt);
+      }
+      // Surface CLI errors that came via stderr (e.g. invalid flag, auth expired)
+      if (code !== 0 && code !== null && stderrBuffer.trim()) {
+        push({ type: 'error', message: `CLI exited with code ${code}: ${stderrBuffer.trim()}` });
       }
       closed = true;
       push(null);
@@ -99,7 +111,7 @@ export class TurnRunner {
 
   async quota(): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn('agy', ['--print', '/quota', '--output-format', 'stream-json'], {
+      const child = spawn(getConfig().agyBin, ['--print', '/quota', '--output-format', 'stream-json'], {
         stdio: ['pipe', 'pipe', 'pipe']
       });
       let output = '';
