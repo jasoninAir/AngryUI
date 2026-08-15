@@ -36,7 +36,7 @@ discovery.start((event) => {
 });
 
 const httpServer = http.createServer(app);
-attachWsServer(httpServer, config.token);
+attachWsServer(httpServer, config.token, index);
 
 httpServer.listen(config.port, config.host, () => {
   console.log(`AGY Web UI server listening on ${config.host}:${config.port}`);
