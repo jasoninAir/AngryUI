@@ -6,6 +6,7 @@ import { attachWsServer } from './ws/wsServer';
 import { requireAuth } from './utils/tokens';
 import { ConversationIndex } from './db/conversationIndex';
 import { createProjectsRouter } from './routes/projects';
+import { DiscoveryService } from './services/discoveryService';
 
 const config = getConfig();
 const app = express();
@@ -27,6 +28,13 @@ const index = new ConversationIndex();
 index.load();
 app.use('/api', createProjectsRouter(index));
 
+// Start the discovery service to watch conversation_summaries.db and history.jsonl.
+// Logs deltas; in later phases, this will broadcast over WebSocket.
+const discovery = new DiscoveryService(index);
+discovery.start((event) => {
+  console.log(`[Discovery] ${event.type}: ${event.conversation_id}`);
+});
+
 const httpServer = http.createServer(app);
 attachWsServer(httpServer, config.token);
 
@@ -37,6 +45,7 @@ httpServer.listen(config.port, config.host, () => {
 // Graceful shutdown
 const shutdown = (signal: string) => {
   console.log(`Received ${signal}, shutting down server...`);
+  discovery.stop();
   httpServer.close(() => process.exit(0));
   // Force exit after 5s if connections refuse to close
   setTimeout(() => process.exit(1), 5000).unref();

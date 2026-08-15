@@ -52,9 +52,20 @@ export class ConversationIndex {
   }
 
   private parseRow(row: any): ConversationSummary {
+    let uris: string[] = [];
+    if (Array.isArray(row.workspace_uris)) {
+      uris = row.workspace_uris;
+    } else if (typeof row.workspace_uris === 'string') {
+      try {
+        uris = JSON.parse(row.workspace_uris);
+      } catch {
+        uris = [];
+      }
+    }
+
     return {
       ...row,
-      workspace_uris: JSON.parse(row.workspace_uris || '[]'),
+      workspace_uris: uris,
       not_fully_idle: Boolean(row.not_fully_idle),
       killed: Boolean(row.killed)
     };
