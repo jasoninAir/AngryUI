@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { useConversation } from '@/hooks/useConversation';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
-import { WebTTYModal } from '../tui/WebTTYModal';
+
+// Code-split the WebTTY component — xterm.js + CSS is heavy and only
+// needed when the user opens the terminal fallback.
+const WebTTYModal = lazy(() =>
+  import('../tui/WebTTYModal').then((m) => ({ default: m.WebTTYModal }))
+);
 
 const MODELS = [
   'Gemini 3.7 Flash (High)',
@@ -20,7 +25,8 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     send,
     cancel,
     interactivePrompt,
-    clearInteractivePrompt
+    clearInteractivePrompt,
+    refresh
   } = useConversation(conversationId);
   const [model, setModel] = useState(MODELS[0]);
   const [showTty, setShowTty] = useState(false);
@@ -55,13 +61,17 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
       <MessageList messages={messages} />
       <ChatInput onSend={(text) => send(text, model)} onCancel={cancel} status={status} />
       {showTty && (
-        <WebTTYModal
-          conversationId={conversationId}
-          onClose={() => {
-            setShowTty(false);
-            clearInteractivePrompt();
-          }}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground">Loading WebTTY…</div>}>
+          <WebTTYModal
+            conversationId={conversationId}
+            onClose={() => {
+              setShowTty(false);
+              clearInteractivePrompt();
+              // Re-sync conversations state — TUI may have produced new turns
+              refresh();
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

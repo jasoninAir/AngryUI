@@ -3,6 +3,17 @@ import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import 'xterm/css/xterm.css';
 
+const VIRTUAL_KEYS: Array<{ label: string; input: string }> = [
+  { label: 'Esc', input: '\x1b' },
+  { label: 'Tab', input: '\t' },
+  { label: 'Ctrl+C', input: '\x03' },
+  { label: '↑', input: '\x1b[A' },
+  { label: '↓', input: '\x1b[B' },
+  { label: '←', input: '\x1b[D' },
+  { label: '→', input: '\x1b[C' },
+  { label: 'Enter', input: '\r' }
+];
+
 export function WebTTYModal({
   conversationId,
   onClose
@@ -51,6 +62,13 @@ export function WebTTYModal({
     };
   }, [conversationId, onClose]);
 
+  const sendKey = (input: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'tui:input', data: input }));
+    }
+    termRef.current?.focus();
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       <div className="border-b border-border px-4 py-2 flex items-center justify-between">
@@ -60,6 +78,23 @@ export function WebTTYModal({
         </button>
       </div>
       <div ref={ref} className="flex-1" />
+      {/* Mobile virtual keys bar — essential for touch devices since
+          soft-keyboards lack Esc / Tab / arrows / Ctrl+C. */}
+      <div className="border-t border-border px-2 py-2 flex gap-1 overflow-x-auto md:hidden">
+        {VIRTUAL_KEYS.map((k) => (
+          <button
+            key={k.label}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              sendKey(k.input);
+            }}
+            onClick={() => sendKey(k.input)}
+            className="shrink-0 px-3 py-2 text-xs font-mono border border-border rounded bg-secondary text-secondary-foreground active:opacity-60"
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

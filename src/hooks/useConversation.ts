@@ -155,5 +155,25 @@ export function useConversation(conversationId: string) {
     dispatch({ type: 'interactive_prompt', active: false });
   };
 
-  return { ...state, readyState, send: sendPrompt, cancel, clearInteractivePrompt };
+  /**
+   * Re-subscribe to the current conversation. Useful after WebTTY exits —
+   * the conversation may have new turns that the chat UI needs to pick up.
+   */
+  const refresh = () => {
+    send({
+      type: 'chat:unsubscribe',
+      conversationId: conversationIdRef.current,
+      payload: {},
+      timestamp: Date.now()
+    });
+    dispatch({ type: 'reset' });
+    send({
+      type: 'chat:subscribe',
+      conversationId: conversationIdRef.current,
+      payload: {},
+      timestamp: Date.now()
+    });
+  };
+
+  return { ...state, readyState, send: sendPrompt, cancel, clearInteractivePrompt, refresh };
 }
