@@ -46,15 +46,6 @@ export function formatAgyModel(model?: string, effort?: 'low' | 'medium' | 'high
 
 export class TurnRunner {
   spawn(opts: TurnOptions): TurnHandle {
-    const formattedModel = formatAgyModel(opts.model, opts.effort);
-    const args = [
-      '--conversation', opts.conversationId,
-      ...(formattedModel ? ['--model', formattedModel] : []),
-      ...(opts.dangerouslySkipPermissions ? ['--dangerously-skip-permissions'] : []),
-      '--output-format', 'stream-json',
-      '--print', opts.message
-    ];
-
     let runCwd = process.cwd();
     if (opts.cwd) {
       const clean = opts.cwd.startsWith('file://') ? opts.cwd.replace('file://', '') : opts.cwd;
@@ -67,6 +58,16 @@ export class TurnRunner {
         }
       }
     }
+
+    const formattedModel = formatAgyModel(opts.model, opts.effort);
+    const args = [
+      '--conversation', opts.conversationId,
+      ...(formattedModel ? ['--model', formattedModel] : []),
+      ...(opts.dangerouslySkipPermissions ? ['--dangerously-skip-permissions'] : []),
+      '--add-dir', runCwd,
+      '--output-format', 'stream-json',
+      '--print', opts.message
+    ];
 
     const child: ChildProcessWithoutNullStreams = spawn(getConfig().agyBin, args, {
       stdio: ['pipe', 'pipe', 'pipe'],

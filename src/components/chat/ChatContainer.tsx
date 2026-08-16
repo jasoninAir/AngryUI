@@ -19,6 +19,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const workspaceParam = searchParams.get('workspace') || undefined;
   const { isOpen, isMobile, toggleSidebar } = useSidebar();
   const { setLocalStatus } = useSessionStatus();
+  const [workspace, setWorkspace] = useState<string | undefined>(workspaceParam);
 
   const {
     messages,
@@ -34,6 +35,22 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     hasMoreHistory,
     historyLoading
   } = useConversation(conversationId);
+
+  useEffect(() => {
+    if (workspaceParam) {
+      setWorkspace(workspaceParam);
+    } else if (conversationId) {
+      fetch(`/api/conversations/${conversationId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((conv) => {
+          if (conv?.workspace_uris?.[0]) {
+            const ws = conv.workspace_uris[0].replace(/^file:\/\//, '');
+            setWorkspace(ws);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [conversationId, workspaceParam]);
 
   useEffect(() => {
     if (interactivePrompt) {
@@ -63,9 +80,9 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     }
   };
 
-  const cleanWorkspaceDisplay = workspaceParam?.startsWith('file://')
-    ? workspaceParam.replace('file://', '')
-    : workspaceParam;
+  const cleanWorkspaceDisplay = workspace?.startsWith('file://')
+    ? workspace.replace('file://', '')
+    : workspace;
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
@@ -215,7 +232,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
       {/* Pinned Bottom Input */}
       <div className="shrink-0">
         <ChatInput
-          onSend={(text) => send(text, model, effort, workspaceParam)}
+          onSend={(text) => send(text, model, effort, workspace)}
           onCancel={cancel}
           status={status}
         />

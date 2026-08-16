@@ -11,6 +11,16 @@ export function createProjectsRouter(index: ConversationIndex): Router {
     res.json({ statuses: conversationHub.getAllStatuses() });
   });
 
+  // GET /api/conversations/:id
+  router.get('/conversations/:id', (req, res) => {
+    const { id } = req.params;
+    const conv = index.getById(id);
+    if (!conv) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    res.json(conv);
+  });
+
   // GET /api/conversations/:id/history?turns=5&offset=0
   router.get('/conversations/:id/history', (req, res) => {
     const { id } = req.params;
