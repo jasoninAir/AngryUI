@@ -1,4 +1,5 @@
 import { useState, KeyboardEvent } from 'react';
+import { Send, Square } from 'lucide-react';
 
 export function ChatInput({
   onSend,
@@ -22,21 +23,22 @@ export function ChatInput({
   };
 
   return (
-    <div className="border-t border-border p-3 flex gap-2">
+    <div className="border-t border-border bg-card/60 p-3 flex items-end gap-2">
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKey}
-        placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
+        placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
         rows={2}
-        className="flex-1 resize-none rounded border border-input bg-background px-3 py-2 text-sm"
+        className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 max-h-32"
       />
       {status === 'RUNNING' ? (
         <button
           onClick={onCancel}
-          className="rounded bg-destructive text-destructive-foreground px-4"
+          className="h-10 px-4 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0"
         >
-          Stop
+          <Square className="w-3.5 h-3.5 fill-current" />
+          <span>Stop</span>
         </button>
       ) : (
         <button
@@ -47,9 +49,10 @@ export function ChatInput({
             }
           }}
           disabled={!text.trim()}
-          className="rounded bg-primary text-primary-foreground px-4 disabled:opacity-50"
+          className="h-10 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 shadow-sm"
         >
-          Send
+          <Send className="w-3.5 h-3.5" />
+          <span>Send</span>
         </button>
       )}
     </div>

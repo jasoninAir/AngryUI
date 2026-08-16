@@ -1,4 +1,5 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { StringDecoder } from 'string_decoder';
 import { parseStreamLine, AgyEvent } from '../utils/streamParser';
 import { getConfig } from '../config';
 
@@ -36,7 +37,8 @@ export class TurnRunner {
 
     const child: ChildProcessWithoutNullStreams = spawn(getConfig().agyBin, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: runCwd
+      cwd: runCwd,
+      env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', PYTHONIOENCODING: 'utf-8' }
     });
 
     const queue: AgyEvent[] = [];
@@ -51,9 +53,11 @@ export class TurnRunner {
 
     let buffer = '';
     let stderrBuffer = '';
+    const stdoutDecoder = new StringDecoder('utf-8');
+    const stderrDecoder = new StringDecoder('utf-8');
 
     child.stdout.on('data', (chunk: Buffer) => {
-      buffer += chunk.toString();
+      buffer += stdoutDecoder.write(chunk);
       let idx;
       while ((idx = buffer.indexOf('\n')) !== -1) {
         const line = buffer.slice(0, idx);
@@ -64,10 +68,13 @@ export class TurnRunner {
     });
 
     child.stderr.on('data', (chunk: Buffer) => {
-      stderrBuffer += chunk.toString();
+      stderrBuffer += stderrDecoder.write(chunk);
     });
 
     child.on('close', (code) => {
+      buffer += stdoutDecoder.end();
+      stderrBuffer += stderrDecoder.end();
+
       // Flush any remaining stdout buffer
       if (buffer.trim()) {
         const evt = parseStreamLine(buffer);

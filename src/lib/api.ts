@@ -6,6 +6,34 @@ export interface ProjectsResponse {
   archivedCount?: number;
 }
 
+export interface HistoryResponse {
+  messages: Array<{
+    id: string;
+    role: 'user' | 'assistant' | 'tool';
+    text?: string;
+    thought?: string;
+    name?: string;
+    input?: any;
+    output?: string;
+    timestamp?: string;
+  }>;
+  totalTurns: number;
+  loadedTurns: number;
+  hasMore: boolean;
+}
+
+export async function fetchConversationHistory(
+  conversationId: string,
+  turns = 5,
+  offset = 0
+): Promise<HistoryResponse> {
+  const res = await fetch(
+    `/api/conversations/${encodeURIComponent(conversationId)}/history?turns=${turns}&offset=${offset}`
+  );
+  if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`);
+  return res.json();
+}
+
 export async function fetchProjects(showArchived = false): Promise<ProjectsResponse> {
   const url = `/api/projects${showArchived ? '?showArchived=true' : ''}`;
   const res = await fetch(url);

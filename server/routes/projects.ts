@@ -1,8 +1,18 @@
 import { Router } from 'express';
 import { ConversationIndex } from '../db/conversationIndex';
+import { getConversationHistory } from '../services/historyService';
 
 export function createProjectsRouter(index: ConversationIndex): Router {
   const router = Router();
+
+  // GET /api/conversations/:id/history?turns=5&offset=0
+  router.get('/conversations/:id/history', (req, res) => {
+    const { id } = req.params;
+    const turns = parseInt(req.query.turns as string, 10) || 5;
+    const offset = parseInt(req.query.offset as string, 10) || 0;
+    const result = getConversationHistory(id, turns, offset);
+    res.json(result);
+  });
 
   // GET /api/projects?showArchived=true|false
   router.get('/projects', (req, res) => {

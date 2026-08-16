@@ -1,20 +1,16 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
+import { fetchConversationHistory } from '@/lib/api';
 import type { AgyEventClient } from '@/lib/types';
 
-type Message =
-  | { id: string; role: 'user'; text: string }
-  | { id: string; role: 'assistant'; text: string; toolCalls?: any[]; thought?: string }
-  | { id: string; role: 'tool'; name: string; input: any; output: string };
+export type Message =
+  | { id: string; role: 'user'; text: string; timestamp?: string }
+  | { id: string; role: 'assistant'; text: string; toolCalls?: any[]; thought?: string; timestamp?: string }
+  | { id: string; role: 'tool'; name: string; input: any; output: string; timestamp?: string };
 
 type State = {
   messages: Message[];
   status: 'IDLE' | 'RUNNING' | 'PAUSED';
-  /**
-   * True when server emits `chat:interactive_prompt` (e.g. AGY waiting for
-   * ask_permission / ask_question). ChatContainer uses this to auto-open
-   * the WebTTY modal for interactive resolution.
-   */
   interactivePrompt: boolean;
 };
 
@@ -23,10 +19,20 @@ type Action =
   | { type: 'event'; event: AgyEventClient }
   | { type: 'status'; status: 'IDLE' | 'RUNNING' | 'PAUSED' }
   | { type: 'interactive_prompt'; active: boolean }
+  | { type: 'prepend_history'; messages: Message[] }
   | { type: 'reset' };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'prepend_history': {
+      // Filter out messages that already exist by ID to avoid duplicates
+      const existingIds = new Set(state.messages.map((m) => m.id));
+      const newMessages = action.messages.filter((m) => !existingIds.has(m.id));
+      return {
+        ...state,
+        messages: [...newMessages, ...state.messages]
+      };
+    }
     case 'user':
       return {
         ...state,
@@ -100,9 +106,18 @@ export function useConversation(conversationId: string) {
   });
   const conversationIdRef = useRef(conversationId);
 
+  const [loadedTurns, setLoadedTurns] = useState(0);
+  const [totalTurns, setTotalTurns] = useState<number | null>(null);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   useEffect(() => {
     conversationIdRef.current = conversationId;
-    // Unsubscribe previous, subscribe new
+    setLoadedTurns(0);
+    setTotalTurns(null);
+    setHasMoreHistory(true);
+    setHistoryLoading(false);
+
     send({
       type: 'chat:unsubscribe',
       conversationId: conversationIdRef.current,
@@ -131,6 +146,24 @@ export function useConversation(conversationId: string) {
     }
   }, [lastMessage]);
 
+  const loadHistory = useCallback(async (limit = 5) => {
+    if (historyLoading || !hasMoreHistory) return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetchConversationHistory(conversationIdRef.current, limit, loadedTurns);
+      setTotalTurns(res.totalTurns);
+      setHasMoreHistory(res.hasMore);
+      setLoadedTurns(res.loadedTurns);
+      if (res.messages.length > 0) {
+        dispatch({ type: 'prepend_history', messages: res.messages as Message[] });
+      }
+    } catch (e) {
+      console.error('Failed to load history:', e);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [hasMoreHistory, historyLoading, loadedTurns]);
+
   const sendPrompt = (text: string, model: string, workspace?: string) => {
     dispatch({ type: 'user', text });
     dispatch({ type: 'interactive_prompt', active: false });
@@ -155,10 +188,6 @@ export function useConversation(conversationId: string) {
     dispatch({ type: 'interactive_prompt', active: false });
   };
 
-  /**
-   * Re-subscribe to the current conversation. Useful after WebTTY exits —
-   * the conversation may have new turns that the chat UI needs to pick up.
-   */
   const refresh = () => {
     send({
       type: 'chat:unsubscribe',
@@ -175,5 +204,17 @@ export function useConversation(conversationId: string) {
     });
   };
 
-  return { ...state, readyState, send: sendPrompt, cancel, clearInteractivePrompt, refresh };
+  return {
+    ...state,
+    readyState,
+    send: sendPrompt,
+    cancel,
+    clearInteractivePrompt,
+    refresh,
+    loadHistory,
+    loadedTurns,
+    totalTurns,
+    hasMoreHistory,
+    historyLoading
+  };
 }
