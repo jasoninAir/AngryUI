@@ -1,4 +1,5 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import fs from 'fs';
 import { StringDecoder } from 'string_decoder';
 import { parseStreamLine, AgyEvent } from '../utils/streamParser';
 import { getConfig } from '../config';
@@ -18,12 +19,37 @@ export interface TurnHandle {
   abort(): void;
 }
 
+/**
+ * Format model and effort into AGY CLI expected model flag string.
+ * Example: 'Gemini 3.7 Flash' + 'high' => 'Gemini 3.7 Flash (High)'
+ * 'Claude Sonnet 4.6 (Thinking)' => 'Claude Sonnet 4.6 (Thinking)'
+ */
+export function formatAgyModel(model?: string, effort?: 'low' | 'medium' | 'high'): string | undefined {
+  if (!model) return undefined;
+  if (model.includes('(')) {
+    if (effort) {
+      const base = model.replace(/\s*\([^)]*\)/, '').trim();
+      const capEffort = effort.charAt(0).toUpperCase() + effort.slice(1);
+      return `${base} (${capEffort})`;
+    }
+    return model;
+  }
+  if (effort) {
+    const capEffort = effort.charAt(0).toUpperCase() + effort.slice(1);
+    return `${model} (${capEffort})`;
+  }
+  if (model.toLowerCase().includes('gemini')) {
+    return `${model} (High)`;
+  }
+  return model;
+}
+
 export class TurnRunner {
   spawn(opts: TurnOptions): TurnHandle {
+    const formattedModel = formatAgyModel(opts.model, opts.effort);
     const args = [
       '--conversation', opts.conversationId,
-      ...(opts.model ? ['--model', opts.model] : []),
-      ...(opts.effort ? ['--effort', opts.effort] : []),
+      ...(formattedModel ? ['--model', formattedModel] : []),
       ...(opts.dangerouslySkipPermissions ? ['--dangerously-skip-permissions'] : []),
       '--output-format', 'stream-json',
       '--print', opts.message
@@ -32,7 +58,14 @@ export class TurnRunner {
     let runCwd = process.cwd();
     if (opts.cwd) {
       const clean = opts.cwd.startsWith('file://') ? opts.cwd.replace('file://', '') : opts.cwd;
-      if (clean && clean.trim()) runCwd = clean.trim();
+      if (clean && clean.trim()) {
+        runCwd = clean.trim();
+        if (!fs.existsSync(runCwd)) {
+          try {
+            fs.mkdirSync(runCwd, { recursive: true });
+          } catch {}
+        }
+      }
     }
 
     const child: ChildProcessWithoutNullStreams = spawn(getConfig().agyBin, args, {

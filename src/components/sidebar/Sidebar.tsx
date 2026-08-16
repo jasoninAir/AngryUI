@@ -24,9 +24,32 @@ export function Sidebar() {
     loading
   } = useProjectIndex();
 
-  // Extract active conversationId from route /chat/:id
+  // Extract active conversationId and workspace query from route /chat/:id?workspace=...
   const match = location.pathname.match(/^\/chat\/([^/]+)/);
   const activeConversationId = match ? match[1] : undefined;
+  const searchParams = new URLSearchParams(location.search);
+  const rawWorkspace = searchParams.get('workspace');
+  const activeWorkspaceClean = rawWorkspace
+    ? rawWorkspace.startsWith('file://')
+      ? rawWorkspace.replace('file://', '')
+      : rawWorkspace
+    : undefined;
+
+  // Synthesize group list: if active route is a new session with a workspace not in SQLite yet, include it
+  const displayGroups = [...groups];
+  if (
+    activeConversationId &&
+    activeWorkspaceClean &&
+    !groups.some((g) => {
+      const gw = g.workspace.startsWith('file://') ? g.workspace.replace('file://', '') : g.workspace;
+      return gw === activeWorkspaceClean;
+    })
+  ) {
+    displayGroups.unshift({
+      workspace: activeWorkspaceClean,
+      conversations: []
+    });
+  }
 
   const existingWorkspaces = groups.map((g) => g.workspace);
 
@@ -94,7 +117,7 @@ export function Sidebar() {
 
       {/* Center: Scrollable Projects & Conversations */}
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        {groups.length === 0 ? (
+        {displayGroups.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             <p>暂无会话</p>
             <button
@@ -105,16 +128,8 @@ export function Sidebar() {
             </button>
           </div>
         ) : (
-          groups.map((g) => (
-            <div
-              key={g.workspace}
-              onClick={() => {
-                // If on mobile and clicking conversation link inside group, close drawer
-                if (isMobile) {
-                  // Keep open on group header toggle, close on conversation item click
-                }
-              }}
-            >
+          displayGroups.map((g) => (
+            <div key={g.workspace}>
               <WorkspaceGroup
                 workspace={g.workspace}
                 conversations={g.conversations}

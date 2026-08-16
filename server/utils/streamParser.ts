@@ -70,6 +70,12 @@ export function parseStreamLine(line: string): AgyEvent | null {
 
   if (raw.event === 'result' && raw.result) {
     const r = raw.result;
+    if (r.status === 'ERROR' || r.error) {
+      return {
+        type: 'error',
+        message: r.error || r.response || 'Agent execution failed'
+      };
+    }
     return {
       type: 'result',
       conversation_id: r.conversation_id,
@@ -78,6 +84,13 @@ export function parseStreamLine(line: string): AgyEvent | null {
       duration_seconds: r.duration_seconds,
       num_turns: r.num_turns,
       usage: r.usage
+    };
+  }
+
+  if (raw.event === 'error' || raw.type === 'error' || raw.error) {
+    return {
+      type: 'error',
+      message: typeof raw.error === 'string' ? raw.error : raw.error?.message || raw.message || 'Unknown error'
     };
   }
 

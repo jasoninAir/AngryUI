@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { TurnRunner } from '../../server/services/turnRunner';
+import { TurnRunner, formatAgyModel } from '../../server/services/turnRunner';
 import { ConversationIndex } from '../../server/db/conversationIndex';
 
 describe('TurnRunner', () => {
   let testConversationId: string;
 
-  // Defensive: dynamically pick a real conversation ID rather than hardcoding.
-  // Avoids flaky tests when conversations are archived or DB is rebuilt.
   beforeAll(() => {
     const idx = new ConversationIndex();
     idx.load();
@@ -17,12 +15,22 @@ describe('TurnRunner', () => {
     testConversationId = all[0].conversation_id;
   });
 
+  it('formatAgyModel correctly formats model and effort for CLI', () => {
+    expect(formatAgyModel('Gemini 3.7 Flash', 'high')).toBe('Gemini 3.7 Flash (High)');
+    expect(formatAgyModel('Gemini 3.7 Flash', 'medium')).toBe('Gemini 3.7 Flash (Medium)');
+    expect(formatAgyModel('Gemini 3.1 Pro', 'low')).toBe('Gemini 3.1 Pro (Low)');
+    expect(formatAgyModel('Claude Sonnet 4.6 (Thinking)')).toBe('Claude Sonnet 4.6 (Thinking)');
+    expect(formatAgyModel('GPT-OSS 120B (Medium)')).toBe('GPT-OSS 120B (Medium)');
+    expect(formatAgyModel('Gemini 2.5 Flash')).toBe('Gemini 2.5 Flash (High)');
+  });
+
   it('spawns agy and receives init event', async () => {
     const runner = new TurnRunner();
     const handle = runner.spawn({
       conversationId: testConversationId,
       message: 'say hi',
-      model: 'Gemini 3.7 Flash (High)'
+      model: 'Gemini 3.7 Flash',
+      effort: 'high'
     });
 
     let initSeen = false;
@@ -38,10 +46,6 @@ describe('TurnRunner', () => {
     }
     expect(initSeen).toBe(true);
     expect(resultSeen).toBe(true);
-    // Status is SUCCESS in normal operation; allow ERROR here too because
-    // the test runs against a real multi-turn conversation that may
-    // legitimately fail (e.g. network blip, context overflow). The README
-    // documents this is a smoke test, not a deterministic E2E.
     expect(['SUCCESS', 'ERROR']).toContain(resultStatus);
   }, 60000);
 
@@ -50,7 +54,8 @@ describe('TurnRunner', () => {
     const handle = runner.spawn({
       conversationId: testConversationId,
       message: 'long task',
-      model: 'Gemini 3.7 Flash (High)'
+      model: 'Gemini 3.7 Flash',
+      effort: 'high'
     });
 
     setTimeout(() => handle.abort(), 1000);

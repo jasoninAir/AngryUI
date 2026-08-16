@@ -41,6 +41,15 @@ function reducer(state: State, action: Action): State {
       };
     case 'event': {
       const ev = action.event;
+      if (ev.type === 'error') {
+        return {
+          ...state,
+          messages: [
+            ...state.messages,
+            { id: crypto.randomUUID(), role: 'assistant', text: `❌ 错误: ${ev.message}` }
+          ]
+        };
+      }
       if (ev.type === 'step_update') {
         if (ev.step_type === 'agent_response' && ev.text_delta) {
           const last = state.messages[state.messages.length - 1];
@@ -149,6 +158,11 @@ export function useConversation(conversationId: string) {
       dispatch({ type: 'status', status: nextState });
     } else if (lastMessage.type === 'chat:stream') {
       dispatch({ type: 'event', event: lastMessage.payload });
+    } else if (lastMessage.type === 'chat:error') {
+      dispatch({
+        type: 'event',
+        event: { type: 'error', message: lastMessage.payload?.message || 'Chat execution error' }
+      });
     } else if (lastMessage.type === 'chat:interactive_prompt') {
       soundManager.playAttentionRequired();
       dispatch({ type: 'interactive_prompt', active: true });
