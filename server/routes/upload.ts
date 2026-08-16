@@ -28,7 +28,8 @@ export function createUploadRouter(): Router {
     if (!filePath) {
       return res.status(404).json({ error: 'File not found' });
     }
-    res.sendFile(filePath);
+    // Allow hidden directories (.agy-webui, .gemini) via dotfiles: 'allow'
+    res.sendFile(filePath, { dotfiles: 'allow' });
   });
 
   // GET /api/file-preview?path=... -> Serve local filesystem image or document preview
@@ -47,7 +48,8 @@ export function createUploadRouter(): Router {
       return res.status(404).json({ error: 'File not found on server disk' });
     }
 
-    res.sendFile(resolved);
+    // Allow hidden directories (.agy-webui, .gemini) via dotfiles: 'allow'
+    res.sendFile(resolved, { dotfiles: 'allow' });
   });
 
   return router;
