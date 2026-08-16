@@ -13,7 +13,7 @@ describe('resolveMediaUrl', () => {
   });
 
   it('maps server absolute filesystem path to /api/file-preview', () => {
-    const raw = '/Users/jason/.gemini/antigravity-cli/webui/uploads/123/screenshot.png';
+    const raw = '/Users/mockuser/.gemini/antigravity-cli/webui/uploads/123/screenshot.png';
     const res = resolveMediaUrl(raw);
     expect(res.url).toContain('/api/file-preview?path=');
     expect(res.url).toContain(encodeURIComponent(raw));
@@ -22,7 +22,7 @@ describe('resolveMediaUrl', () => {
   });
 
   it('recognizes non-image documents', () => {
-    const raw = '/Users/jason/docs/data.csv';
+    const raw = '/Users/mockuser/docs/data.csv';
     const res = resolveMediaUrl(raw);
     expect(res.isImage).toBe(false);
     expect(res.filename).toBe('data.csv');

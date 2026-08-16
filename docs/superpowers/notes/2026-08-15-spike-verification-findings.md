@@ -1,6 +1,6 @@
 # Spike Verification Findings — 2026-08-15
 
-> **Source:** Verification of AGY CLI 1.1.13 on local machine (jason)
+> **Source:** Verification of AGY CLI 1.1.13 on local developer environment
 > **Method:** Spawned `agy --conversation <id> --print "<msg>" --output-format stream-json` 5 times with various params, captured raw stdout/stderr
 > **Status:** All findings confirmed against actual AGY behavior
 

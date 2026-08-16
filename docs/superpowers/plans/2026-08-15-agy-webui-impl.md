@@ -174,7 +174,7 @@ Tasks are organized into 6 phases. Each task produces a self-contained, testable
 - [ ] **Step 1: Initialize package.json**
 
 ```bash
-cd /Users/jason/myprojects/agy-webui
+cd /path/to/agy-webui
 npm init -y
 ```
 
@@ -545,7 +545,7 @@ Expected: PASS (4 tests)
 Run: `npm run dev:server`
 Expected: log "AGY Web UI server listening on 0.0.0.0:3000"
 Run in another terminal: `curl http://localhost:3000/api/health`
-Expected: `{"status":"ok","agyHome":"/Users/jason/.gemini/antigravity-cli"}`
+Expected: `{"status":"ok","agyHome":"/Users/username/.gemini/antigravity-cli"}`
 
 - [ ] **Step 8: Commit**
 
