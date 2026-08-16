@@ -16,11 +16,21 @@ function resolveAgyBin(): string {
   if (process.env.AGY_BIN && fs.existsSync(process.env.AGY_BIN)) {
     return process.env.AGY_BIN;
   }
-  // Prefer ~/.local/bin/agy (real CLI binary) over PATH-resolved shims
+  // Prefer ~/.local/bin/agy (real CLI binary on macOS & Linux)
   const localAgy = path.join(os.homedir(), '.local', 'bin', 'agy');
   if (fs.existsSync(localAgy)) return localAgy;
-  // Fallback: rely on PATH (resolved by spawn)
-  return 'agy';
+
+  // Windows standard install paths
+  if (process.platform === 'win32') {
+    const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+    const winAgyCmd = path.join(localAppData, 'Programs', 'antigravity', 'bin', 'agy.cmd');
+    if (fs.existsSync(winAgyCmd)) return winAgyCmd;
+    const winAgyExe = path.join(localAppData, 'Programs', 'antigravity', 'bin', 'agy.exe');
+    if (fs.existsSync(winAgyExe)) return winAgyExe;
+  }
+
+  // Fallback: rely on system PATH (resolved by child_process spawn)
+  return process.platform === 'win32' ? 'agy.cmd' : 'agy';
 }
 
 export function getConfig(): Config {
