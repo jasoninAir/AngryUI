@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Plus, MessageSquarePlus } from 'lucide-react';
+import { useSidebar } from '@/context/SidebarContext';
 import { ConversationItem } from './ConversationItem';
 import type { ConversationSummary } from '@/lib/types';
 
@@ -22,7 +23,10 @@ export function WorkspaceGroup({
   onDelete
 }: WorkspaceGroupProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isMobile, closeSidebar } = useSidebar();
   const [open, setOpen] = useState(true);
+
   const display = workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace;
   const folderName = display.split('/').filter(Boolean).slice(-2).join('/') || display;
 
@@ -31,8 +35,16 @@ export function WorkspaceGroup({
     e.stopPropagation();
     const newId = crypto.randomUUID();
     const cleanWorkspace = workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace;
+    if (isMobile) closeSidebar();
     navigate(`/chat/${newId}?workspace=${encodeURIComponent(cleanWorkspace)}`);
   };
+
+  // Check if current active route is a brand new session for this workspace
+  const isCurrentNewSessionWorkspace = Boolean(
+    activeConversationId &&
+      !conversations.some((c) => c.conversation_id === activeConversationId) &&
+      (location.search.includes(encodeURIComponent(display)) || location.search.includes(encodeURIComponent(workspace)))
+  );
 
   return (
     <div className="mb-2.5">
@@ -55,7 +67,7 @@ export function WorkspaceGroup({
             <Plus className="w-3.5 h-3.5" />
           </button>
 
-          <span className="text-[10px] bg-muted px-1.5 py-0.2 rounded text-muted-foreground">
+          <span className="text-[10px] bg-muted px-1.5 py-0.2 rounded text-muted-foreground font-mono">
             {conversations.length}
           </span>
         </div>
@@ -63,6 +75,13 @@ export function WorkspaceGroup({
 
       {open && (
         <div className="mt-1 space-y-0.5 pl-1">
+          {isCurrentNewSessionWorkspace && (
+            <div className="rounded px-2 py-1.5 text-xs flex items-center gap-1.5 bg-accent text-accent-foreground font-medium border border-primary/30 my-0.5 animate-in fade-in">
+              <MessageSquarePlus className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="truncate">新会话 (准备中...)</span>
+            </div>
+          )}
+
           {conversations.map((c) => (
             <ConversationItem
               key={c.conversation_id}

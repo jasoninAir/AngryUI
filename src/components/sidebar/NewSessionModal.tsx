@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderPlus, X, Folder } from 'lucide-react';
+import { FolderPlus, X, Folder, ArrowRight } from 'lucide-react';
+import { useSidebar } from '@/context/SidebarContext';
 
 interface NewSessionModalProps {
   existingWorkspaces: string[];
@@ -9,17 +10,21 @@ interface NewSessionModalProps {
 
 export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModalProps) {
   const navigate = useNavigate();
+  const { isMobile, closeSidebar } = useSidebar();
   const [workspacePath, setWorkspacePath] = useState('');
-  const [initialPrompt, setInitialPrompt] = useState('');
   const [error, setError] = useState('');
 
-  const cleanPaths = existingWorkspaces
-    .map((w) => (w.startsWith('file://') ? w.replace('file://', '') : w))
-    .filter((w) => w && w !== 'unknown');
+  const cleanPaths = Array.from(
+    new Set(
+      existingWorkspaces
+        .map((w) => (w.startsWith('file://') ? w.replace('file://', '') : w))
+        .filter((w) => w && w !== 'unknown')
+    )
+  );
 
-  const handleCreate = (e?: React.FormEvent) => {
+  const handleCreate = (e?: React.FormEvent, customPath?: string) => {
     if (e) e.preventDefault();
-    const cleanPath = workspacePath.trim();
+    const cleanPath = (customPath !== undefined ? customPath : workspacePath).trim();
     if (!cleanPath) {
       setError('请输入或选择项目工作区目录路径');
       return;
@@ -28,6 +33,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
     const conversationId = crypto.randomUUID();
     const targetUrl = `/chat/${conversationId}?workspace=${encodeURIComponent(cleanPath)}`;
     onClose();
+    if (isMobile) closeSidebar();
     navigate(targetUrl);
   };
 
@@ -37,7 +43,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
       onClick={onClose}
     >
       <div
-        className="bg-card text-card-foreground border border-border rounded-xl shadow-xl w-full max-w-md p-5 space-y-4"
+        className="bg-card text-card-foreground border border-border rounded-xl shadow-xl w-full max-w-md p-5 space-y-4 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -60,7 +66,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
         </div>
 
         {/* Form */}
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={(e) => handleCreate(e)} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
               项目目录路径 (Workspace Directory Path)
@@ -92,7 +98,11 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
                       setWorkspacePath(p);
                       setError('');
                     }}
-                    className="flex items-center gap-1 px-2 py-1 text-xs border border-border rounded-md bg-secondary/50 hover:bg-accent hover:text-accent-foreground truncate max-w-full text-left"
+                    className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-colors truncate max-w-full text-left ${
+                      workspacePath === p
+                        ? 'border-primary bg-primary/10 text-primary font-medium'
+                        : 'border-border bg-secondary/50 hover:bg-accent hover:text-accent-foreground'
+                    }`}
                   >
                     <Folder className="w-3 h-3 shrink-0 text-muted-foreground" />
                     <span className="truncate">{p.split('/').filter(Boolean).slice(-2).join('/') || p}</span>
@@ -114,9 +124,10 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
             <button
               type="submit"
               disabled={!workspacePath.trim()}
-              className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
+              className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1"
             >
-              创建并进入会话
+              <span>创建并进入会话</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </form>

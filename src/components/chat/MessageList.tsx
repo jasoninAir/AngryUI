@@ -13,9 +13,9 @@ export function MessageList({ messages }: { messages: any[] }) {
   if (messages.length === 0) {
     return (
       <div className="h-full flex items-center justify-center p-8 text-center text-xs text-muted-foreground">
-        <div>
-          <p>暂无对话消息</p>
-          <p className="mt-1 opacity-70">在下方输入内容开始对话，或点击右上角「Load History」加载历史记录</p>
+        <div className="space-y-1.5 animate-in fade-in duration-200">
+          <p className="font-semibold text-sm text-foreground">✨ 新会话已就绪</p>
+          <p className="opacity-70">在下方输入框中输入内容即可开始对话，模型将在指定工作区目录执行任务</p>
         </div>
       </div>
     );
