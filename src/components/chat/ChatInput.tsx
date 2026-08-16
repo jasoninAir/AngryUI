@@ -10,6 +10,7 @@ import {
   useImperativeHandle
 } from 'react';
 import { Send, Square, Paperclip, X, FileText, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface ChatInputHandle {
   insertSnippet: (snippet: string) => void;

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { soundManager } from '@/lib/sound';
 
-export type SessionState = 'IDLE' | 'RUNNING' | 'WAITING_INPUT';
+export type SessionState = 'IDLE' | 'RUNNING' | 'WAITING_INPUT' | 'PAUSED';
 
 interface SessionStatusContextType {
   statuses: Record<string, SessionState>;
