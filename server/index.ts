@@ -7,6 +7,8 @@ import { requireAuth } from './utils/tokens';
 import { ConversationIndex } from './db/conversationIndex';
 import { createProjectsRouter } from './routes/projects';
 import { createSettingsRouter } from './routes/settings';
+import path from 'path';
+import fs from 'fs';
 import { DiscoveryService } from './services/discoveryService';
 
 const config = getConfig();
@@ -29,6 +31,16 @@ const index = new ConversationIndex();
 index.load();
 app.use('/api', createProjectsRouter(index));
 app.use('/api', createSettingsRouter());
+
+// Serve static frontend assets in production mode
+const distPath = path.resolve(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/ws')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 // Start the discovery service to watch conversation_summaries.db and history.jsonl.
 // Logs deltas; in later phases, this will broadcast over WebSocket.
