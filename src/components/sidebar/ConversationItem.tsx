@@ -178,6 +178,17 @@ export function ConversationItem({
     );
   }
 
+  const primaryWorkspace =
+    conv.workspace_uris && conv.workspace_uris.length > 0
+      ? conv.workspace_uris[0].startsWith('file://')
+        ? conv.workspace_uris[0].replace(/^file:\/\//, '')
+        : conv.workspace_uris[0]
+      : undefined;
+
+  const chatLink = `/chat/${conv.conversation_id}${
+    primaryWorkspace ? `?workspace=${encodeURIComponent(primaryWorkspace)}` : ''
+  }`;
+
   return (
     <div
       className={`group relative rounded px-2 py-1.5 text-sm flex items-center justify-between transition-colors my-0.5 ${
@@ -187,7 +198,7 @@ export function ConversationItem({
       } ${conv.is_archived ? 'opacity-60' : ''}`}
     >
       <Link
-        to={`/chat/${conv.conversation_id}`}
+        to={chatLink}
         onClick={() => {
           if (isMobile) closeSidebar();
         }}

@@ -76,7 +76,9 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
   // Sync real-time session status to global context
   useEffect(() => {
-    setLocalStatus(conversationId, status);
+    if (status !== 'IDLE') {
+      setLocalStatus(conversationId, status);
+    }
   }, [conversationId, status, setLocalStatus]);
 
   const [model, setModel] = useState<string>(() => {

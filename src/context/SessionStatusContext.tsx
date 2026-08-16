@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { soundManager } from '@/lib/sound';
 
@@ -56,10 +56,12 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
 
       setStatuses((prev) => {
         if (st === 'IDLE') {
+          if (!prev[convId]) return prev;
           const next = { ...prev };
           delete next[convId];
           return next;
         }
+        if (prev[convId] === st) return prev;
         return { ...prev, [convId]: st };
       });
     } else if (lastMessage.type === 'session:status' && lastMessage.conversationId) {
@@ -76,16 +78,21 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
 
       setStatuses((prev) => {
         if (st === 'IDLE') {
+          if (!prev[convId]) return prev;
           const next = { ...prev };
           delete next[convId];
           return next;
         }
+        if (prev[convId] === st) return prev;
         return { ...prev, [convId]: st };
       });
     } else if (lastMessage.type === 'chat:interactive_prompt' && lastMessage.conversationId) {
       const convId = lastMessage.conversationId;
       soundManager.playAttentionRequired();
-      setStatuses((prev) => ({ ...prev, [convId]: 'WAITING_INPUT' }));
+      setStatuses((prev) => {
+        if (prev[convId] === 'WAITING_INPUT') return prev;
+        return { ...prev, [convId]: 'WAITING_INPUT' };
+      });
       prevStatusesRef.current[convId] = 'WAITING_INPUT';
     }
   }, [lastMessage]);
@@ -101,10 +108,12 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
     (conversationId: string, status: SessionState) => {
       setStatuses((prev) => {
         if (status === 'IDLE') {
+          if (!prev[conversationId]) return prev;
           const next = { ...prev };
           delete next[conversationId];
           return next;
         }
+        if (prev[conversationId] === status) return prev;
         return { ...prev, [conversationId]: status };
       });
       // Also notify backend if needed
@@ -118,17 +127,16 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
     [send]
   );
 
-  return (
-    <SessionStatusContext.Provider
-      value={{
-        statuses,
-        getStatus,
-        setLocalStatus
-      }}
-    >
-      {children}
-    </SessionStatusContext.Provider>
+  const value = useMemo(
+    () => ({
+      statuses,
+      getStatus,
+      setLocalStatus
+    }),
+    [statuses, getStatus, setLocalStatus]
   );
+
+  return <SessionStatusContext.Provider value={value}>{children}</SessionStatusContext.Provider>;
 }
 
 export function useSessionStatus() {
