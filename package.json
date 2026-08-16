@@ -12,6 +12,10 @@
     "dev:client": "vite --host",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist-server/server/index.js",
+    "pm2:start": "npm run build && pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop angryui",
+    "pm2:restart": "pm2 restart angryui",
+    "pm2:logs": "pm2 logs angryui",
     "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/* 2>/dev/null || true",
     "test": "vitest run",
     "test:watch": "vitest"
