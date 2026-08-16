@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchPermissions, addPermission, removePermission } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
+import { ShieldCheck, Plus, Trash2 } from 'lucide-react';
 
 const QUICK_PRESETS = [
   'command(npm install)',
@@ -17,6 +19,7 @@ const QUICK_PRESETS = [
 ];
 
 export function PermissionsPanel() {
+  const { t } = useLanguage();
   const [allow, setAllow] = useState<string[]>([]);
   const [newPattern, setNewPattern] = useState('');
   const [error, setError] = useState('');
@@ -64,35 +67,39 @@ export function PermissionsPanel() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Permissions Allow List</h2>
-      <p className="text-sm text-muted-foreground">
-        AGY uses these patterns to auto-approve tool calls. Patterns must start with{' '}
-        <code>command(</code>.
+      <h2 className="text-lg font-semibold flex items-center gap-2">
+        <ShieldCheck className="w-5 h-5 text-primary" />
+        <span>{t('allowListTitle')}</span>
+      </h2>
+      <p className="text-xs text-muted-foreground">
+        {t('allowListDesc')}
       </p>
-      {error && <div className="text-sm text-destructive">{error}</div>}
+      {error && <div className="text-xs text-destructive">{error}</div>}
       <div className="flex gap-2">
         <input
           value={newPattern}
           onChange={(e) => setNewPattern(e.target.value)}
-          placeholder="command(npm install)"
-          className="flex-1 border border-input rounded px-3 py-1.5 text-sm font-mono"
+          placeholder={t('rulePlaceholder')}
+          className="flex-1 border border-input rounded-md px-3 py-1.5 text-xs font-mono bg-background focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <button
           onClick={handleAdd}
-          className="rounded bg-primary text-primary-foreground px-4 text-sm"
+          disabled={!newPattern.trim()}
+          className="rounded-md bg-primary text-primary-foreground px-4 text-xs font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-1"
         >
-          Add
+          <Plus className="w-3.5 h-3.5" />
+          <span>{t('addRuleButton')}</span>
         </button>
       </div>
       {availablePresets.length > 0 && (
-        <div>
-          <div className="text-xs text-muted-foreground mb-2">Quick presets:</div>
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-1.5">
+          <div className="text-[11px] text-muted-foreground">{t('addNewRule')} (Quick presets):</div>
+          <div className="flex flex-wrap gap-1.5">
             {availablePresets.map((p) => (
               <button
                 key={p}
                 onClick={() => add(p)}
-                className="px-2 py-1 text-xs font-mono border border-border rounded bg-secondary text-secondary-foreground hover:bg-accent"
+                className="px-2 py-1 text-xs font-mono border border-border rounded bg-secondary text-secondary-foreground hover:bg-accent cursor-pointer transition-colors"
               >
                 + {p}
               </button>
@@ -100,18 +107,29 @@ export function PermissionsPanel() {
           </div>
         </div>
       )}
-      <ul className="space-y-1">
-        {allow.map((p) => (
-          <li
-            key={p}
-            className="flex items-center justify-between border border-border rounded px-3 py-1.5"
-          >
-            <code className="text-sm">{p}</code>
-            <button onClick={() => remove(p)} className="text-xs text-destructive">
-              Remove
-            </button>
+      <ul className="space-y-1.5">
+        {allow.length === 0 ? (
+          <li className="text-xs text-muted-foreground italic p-2 border border-dashed rounded text-center">
+            {t('noRulesYet')}
           </li>
-        ))}
+        ) : (
+          allow.map((p) => (
+            <li
+              key={p}
+              className="flex items-center justify-between border border-border rounded-lg px-3 py-2 bg-card/40 text-xs"
+            >
+              <code className="font-mono text-foreground">{p}</code>
+              <button
+                onClick={() => remove(p)}
+                className="text-xs text-destructive hover:bg-destructive/10 p-1 rounded transition-colors cursor-pointer flex items-center gap-1"
+                title={t('removeRule')}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{t('removeRule')}</span>
+              </button>
+            </li>
+          ))
+        )}
       </ul>
     </div>
   );

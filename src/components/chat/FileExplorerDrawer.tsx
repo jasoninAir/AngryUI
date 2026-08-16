@@ -18,6 +18,7 @@ import {
   Search,
   FolderTree
 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface WorkspaceFileEntry {
   name: string;
@@ -84,6 +85,7 @@ function TreeNode({
   onInsertPath,
   copiedPath
 }: TreeNodeProps) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState<boolean>(level === 0 || !!searchFilter);
   const [children, setChildren] = useState<WorkspaceFileEntry[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -197,7 +199,7 @@ function TreeNode({
                     e.stopPropagation();
                     onInsertPath(entry.relativePath);
                   }}
-                  title="在对话框中插入 @文件路径"
+                  title={t('insertToChat')}
                   className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -211,7 +213,7 @@ function TreeNode({
                   e.stopPropagation();
                   onCopyPath(entry.relativePath);
                 }}
-                title={isCopied ? '已复制相对路径' : '复制相对路径'}
+                title={isCopied ? t('pathCopied') : t('copyRelativePath')}
                 className={`p-1 rounded transition-colors cursor-pointer ${
                   isCopied
                     ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
@@ -230,7 +232,7 @@ function TreeNode({
                 e.stopPropagation();
                 onCopyPath(entry.relativePath);
               }}
-              title={isCopied ? '已复制目录路径' : '复制目录相对路径'}
+              title={isCopied ? t('pathCopied') : t('copyRelativePath')}
               className={`p-1 rounded transition-colors cursor-pointer ${
                 isCopied
                   ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
@@ -251,7 +253,7 @@ function TreeNode({
               className="py-1 text-[11px] text-muted-foreground/60 italic"
               style={{ paddingLeft: `${(level + 1) * 16 + 24}px` }}
             >
-              加载中...
+              ...
             </div>
           )}
           {filteredChildren && filteredChildren.length === 0 && (
@@ -259,7 +261,7 @@ function TreeNode({
               className="py-1 text-[11px] text-muted-foreground/50 italic"
               style={{ paddingLeft: `${(level + 1) * 16 + 24}px` }}
             >
-              (空目录)
+              ({t('emptyFolder')})
             </div>
           )}
           {filteredChildren &&
@@ -292,6 +294,7 @@ export function FileExplorerDrawer({
   onClose: () => void;
   onInsertPath?: (relPath: string) => void;
 }) {
+  const { t } = useLanguage();
   const [entries, setEntries] = useState<WorkspaceFileEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState<string>('');
@@ -340,7 +343,7 @@ export function FileExplorerDrawer({
         <div className="flex items-center gap-2 min-w-0">
           <FolderTree className="w-4 h-4 text-primary shrink-0" />
           <div className="min-w-0">
-            <h3 className="text-xs font-semibold text-foreground truncate">工作区文件目录</h3>
+            <h3 className="text-xs font-semibold text-foreground truncate">{t('fileExplorerTitle')}</h3>
             <span className="text-[10px] text-muted-foreground truncate block font-mono" title={cleanWorkspace}>
               {workspaceName}
             </span>
@@ -350,14 +353,14 @@ export function FileExplorerDrawer({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={loadRootFiles}
-            title="刷新文件列表"
+            title={t('refreshFiles')}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={onClose}
-            title="收起面板"
+            title={t('cancel')}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -373,13 +376,13 @@ export function FileExplorerDrawer({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索当前目录下的文件..."
+            placeholder={t('searchFilesPlaceholder')}
             className="w-full pl-8 pr-7 py-1.5 text-xs bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 text-muted-foreground hover:text-foreground p-0.5"
+              className="absolute right-2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
             >
               <X className="w-3 h-3" />
             </button>
@@ -392,9 +395,8 @@ export function FileExplorerDrawer({
         <div className="px-3 py-1.5 bg-emerald-500/10 border-b border-emerald-500/20 text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center justify-between shrink-0 animate-in fade-in duration-150">
           <div className="flex items-center gap-1.5 truncate">
             <Check className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">已复制: {copiedPath}</span>
+            <span className="truncate">{t('pathCopied')}: {copiedPath}</span>
           </div>
-          <span className="text-[10px] opacity-75 font-mono ml-2">可直接@粘贴</span>
         </div>
       )}
 
@@ -403,12 +405,12 @@ export function FileExplorerDrawer({
         {loading && entries.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-xs text-muted-foreground gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-primary" />
-            <span>正在读取工作区目录...</span>
+            <span>...</span>
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-xs text-muted-foreground text-center p-4">
             <Folder className="w-8 h-8 text-muted-foreground/40 mb-2" />
-            <span>当前工作区目录下无文件</span>
+            <span>{t('emptyFolder')}</span>
           </div>
         ) : (
           entries.map((entry) => (
@@ -428,8 +430,8 @@ export function FileExplorerDrawer({
 
       {/* Footer Info */}
       <div className="p-2 border-t border-border bg-muted/20 text-[10px] text-muted-foreground/80 flex items-center justify-between shrink-0">
-        <span>点击行末 📋 复制相对路径</span>
-        <span>点击 ➕ 插入 @路径</span>
+        <span>📋 {t('copyRelativePath')}</span>
+        <span>➕ {t('insertToChat')}</span>
       </div>
     </aside>
   );

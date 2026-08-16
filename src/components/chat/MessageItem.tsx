@@ -123,6 +123,7 @@ function renderAssistantContent(
 }
 
 export function MessageItem({ msg }: { msg: Message }) {
+  const { t } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (msg.role === 'user') {
@@ -195,7 +196,7 @@ export function MessageItem({ msg }: { msg: Message }) {
                   onClick={() => setSelectedImage(null)}
                   className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md text-white transition-colors cursor-pointer"
                 >
-                  关闭 (Close)
+                  {t('closeLightbox')}
                 </button>
               </div>
             </div>
@@ -236,7 +237,7 @@ export function MessageItem({ msg }: { msg: Message }) {
                 onClick={() => setSelectedImage(null)}
                 className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md text-white transition-colors cursor-pointer"
               >
-                关闭 (Close)
+                {t('closeLightbox')}
               </button>
             </div>
           </div>

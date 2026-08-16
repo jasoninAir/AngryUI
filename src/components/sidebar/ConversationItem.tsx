@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Pencil, Archive, ArchiveRestore, Trash2, Check, X } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useSessionStatus } from '@/context/SessionStatusContext';
+import { useLanguage } from '@/context/LanguageContext';
 import type { ConversationSummary } from '@/lib/types';
 
 interface ConversationItemProps {
@@ -23,6 +24,7 @@ export function ConversationItem({
   const navigate = useNavigate();
   const { isMobile, closeSidebar } = useSidebar();
   const { getStatus } = useSessionStatus();
+  const { t } = useLanguage();
   const sessionStatus = getStatus(conv.conversation_id);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -126,21 +128,21 @@ export function ConversationItem({
           disabled={isSubmitting}
           autoFocus
           className="flex-1 min-w-0 bg-background border border-input rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-          placeholder="会话名称..."
+          placeholder={t('enterNewTitle')}
         />
         <button
           onClick={handleSaveRename}
           disabled={isSubmitting || !editTitle.trim()}
-          title="保存"
-          className="p-1 text-primary hover:text-primary/80 disabled:opacity-40"
+          title={t('save')}
+          className="p-1 text-primary hover:text-primary/80 disabled:opacity-40 cursor-pointer"
         >
           <Check className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={handleCancelRename}
           disabled={isSubmitting}
-          title="取消"
-          className="p-1 text-muted-foreground hover:text-foreground"
+          title={t('cancel')}
+          className="p-1 text-muted-foreground hover:text-foreground cursor-pointer"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -155,21 +157,21 @@ export function ConversationItem({
         className="rounded px-2 py-1.5 text-xs flex items-center justify-between gap-1 bg-destructive/10 border border-destructive/30 text-destructive my-0.5"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="truncate font-medium">确认删除会话?</span>
+        <span className="truncate font-medium">{t('deleteConfirm')}</span>
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={handleConfirmDelete}
             disabled={isSubmitting}
-            className="px-2 py-0.5 bg-destructive text-destructive-foreground rounded text-[11px] font-medium hover:bg-destructive/90 disabled:opacity-50"
+            className="px-2 py-0.5 bg-destructive text-destructive-foreground rounded text-[11px] font-medium hover:bg-destructive/90 disabled:opacity-50 cursor-pointer"
           >
-            删除
+            {t('delete')}
           </button>
           <button
             onClick={handleCancelDelete}
             disabled={isSubmitting}
-            className="px-1.5 py-0.5 text-muted-foreground hover:text-foreground text-[11px]"
+            className="px-1.5 py-0.5 text-muted-foreground hover:text-foreground text-[11px] cursor-pointer"
           >
-            取消
+            {t('cancel')}
           </button>
         </div>
       </div>
@@ -194,20 +196,20 @@ export function ConversationItem({
       >
         {/* Real-time Status Dot Indicator: Green for RUNNING, Blue for WAITING_INPUT */}
         {sessionStatus === 'RUNNING' && (
-          <span className="relative flex h-2 w-2 shrink-0" title="正在运行中 (Running)">
+          <span className="relative flex h-2 w-2 shrink-0" title={t('running')}>
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
         )}
         {sessionStatus === 'WAITING_INPUT' && (
-          <span className="relative flex h-2 w-2 shrink-0" title="等待用户交互/确认 (Waiting for User)">
+          <span className="relative flex h-2 w-2 shrink-0" title={t('waitingInput')}>
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
           </span>
         )}
 
         {conv.is_archived && (
-          <span title="已归档" className="shrink-0 text-amber-500">
+          <span title={t('archivedSessions')} className="shrink-0 text-amber-500">
             <Archive className="w-3 h-3" />
           </span>
         )}
@@ -220,7 +222,7 @@ export function ConversationItem({
           isActive ? 'hidden' : 'group-hover:hidden'
         }`}
       >
-        {conv.step_count}步
+        {conv.step_count}
       </span>
 
       {/* 3 Action Buttons (Rename, Archive, Delete) shown on hover or when item is active */}
@@ -232,8 +234,8 @@ export function ConversationItem({
         {/* 1. Rename Button (Pen icon) */}
         <button
           onClick={handleStartEdit}
-          title="重命名会话 (Rename)"
-          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors"
+          title={t('rename')}
+          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors cursor-pointer"
         >
           <Pencil className="w-3.5 h-3.5" />
         </button>
@@ -241,8 +243,8 @@ export function ConversationItem({
         {/* 2. Archive Button (Box icon) */}
         <button
           onClick={handleArchiveToggle}
-          title={conv.is_archived ? '取消归档 (Unarchive)' : '归档会话 (Archive)'}
-          className="p-1 rounded text-muted-foreground hover:text-amber-500 hover:bg-background/80 transition-colors"
+          title={conv.is_archived ? t('unarchive') : t('archive')}
+          className="p-1 rounded text-muted-foreground hover:text-amber-500 hover:bg-background/80 transition-colors cursor-pointer"
         >
           {conv.is_archived ? (
             <ArchiveRestore className="w-3.5 h-3.5" />
@@ -254,8 +256,8 @@ export function ConversationItem({
         {/* 3. Delete Button (Trash icon) */}
         <button
           onClick={handleStartDelete}
-          title="删除会话 (Delete)"
-          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-background/80 transition-colors"
+          title={t('delete')}
+          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-background/80 transition-colors cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>

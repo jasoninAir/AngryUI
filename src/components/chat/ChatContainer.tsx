@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useConversation } from '@/hooks/useConversation';
 import { useSidebar } from '@/context/SidebarContext';
 import { useSessionStatus } from '@/context/SessionStatusContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { SUPPORTED_MODELS, getModelConfig, EffortLevel } from '@/lib/models';
 import { MessageList } from './MessageList';
 import { ChatInput, ChatInputHandle } from './ChatInput';
@@ -33,6 +34,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const workspaceParam = searchParams.get('workspace') || undefined;
   const { isOpen, isMobile, toggleSidebar } = useSidebar();
   const { setLocalStatus } = useSessionStatus();
+  const { t } = useLanguage();
   const [workspace, setWorkspace] = useState<string | undefined>(workspaceParam);
   const [showFileExplorer, setShowFileExplorer] = useState<boolean>(false);
   const chatInputRef = useRef<ChatInputHandle>(null);
@@ -59,107 +61,113 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const {
     messages,
     status,
+    interactivePrompt,
+    permissionPrompt,
+    historyLoading,
+    totalTurns,
+    loadedTurns,
+    hasMoreHistory,
     send,
     cancel,
-    interactivePrompt,
-    clearInteractivePrompt,
-    permissionPrompt,
-    clearPermissionPrompt,
-    refresh,
     loadHistory,
-    loadedTurns,
-    totalTurns,
-    hasMoreHistory,
-    historyLoading
+    clearInteractivePrompt,
+    clearPermissionPrompt
   } = useConversation(conversationId);
 
+  // Sync real-time session status to global context
   useEffect(() => {
-    if (workspaceParam) {
-      setWorkspace(workspaceParam);
-    } else if (conversationId) {
-      fetch(`/api/conversations/${conversationId}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((conv) => {
-          if (conv?.workspace_uris?.[0]) {
-            const ws = conv.workspace_uris[0].replace(/^file:\/\//, '');
-            setWorkspace(ws);
+    setLocalStatus(conversationId, status);
+  }, [conversationId, status, setLocalStatus]);
+
+  const [model, setModel] = useState<string>(() => {
+    return localStorage.getItem(`agy_model_${conversationId}`) || 'Gemini 3.7 Flash (High)';
+  });
+
+  const currentModelConfig = getModelConfig(model);
+
+  const [effort, setEffort] = useState<EffortLevel | undefined>(() => {
+    if (currentModelConfig.efforts.length === 0) return undefined;
+    return (localStorage.getItem(`agy_effort_${conversationId}`) as EffortLevel) || currentModelConfig.defaultEffort;
+  });
+
+  const handleModelChange = (newModelName: string) => {
+    setModel(newModelName);
+    localStorage.setItem(`agy_model_${conversationId}`, newModelName);
+
+    const cfg = getModelConfig(newModelName);
+    if (cfg.efforts.length > 0) {
+      const newEffort = cfg.defaultEffort || cfg.efforts[0];
+      setEffort(newEffort);
+      localStorage.setItem(`agy_effort_${conversationId}`, newEffort);
+    } else {
+      setEffort(undefined);
+      localStorage.removeItem(`agy_effort_${conversationId}`);
+    }
+  };
+
+  const [showTty, setShowTty] = useState(false);
+
+  // Auto-fill workspace from database if not specified in searchParams
+  useEffect(() => {
+    if (!workspace) {
+      fetch('/api/projects')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.groups) {
+            for (const g of data.groups) {
+              const found = g.conversations.find((c: any) => c.conversation_id === conversationId);
+              if (found && g.workspace) {
+                const cleanW = g.workspace.startsWith('file://') ? g.workspace.replace('file://', '') : g.workspace;
+                setWorkspace(cleanW);
+                break;
+              }
+            }
           }
         })
         .catch(() => {});
     }
-  }, [conversationId, workspaceParam]);
-
-  useEffect(() => {
-    if (interactivePrompt || permissionPrompt) {
-      setLocalStatus(conversationId, 'WAITING_INPUT');
-    } else if (status === 'RUNNING') {
-      setLocalStatus(conversationId, 'RUNNING');
-    } else {
-      setLocalStatus(conversationId, 'IDLE');
-    }
-  }, [conversationId, interactivePrompt, permissionPrompt, setLocalStatus, status]);
-
-  const [model, setModel] = useState<string>(SUPPORTED_MODELS[0].name);
-  const [effort, setEffort] = useState<EffortLevel | undefined>(SUPPORTED_MODELS[0].defaultEffort || 'high');
-  const [showTty, setShowTty] = useState(false);
-
-  const currentModelConfig = getModelConfig(model);
-
-  const handleModelChange = (newModelName: string) => {
-    setModel(newModelName);
-    const cfg = getModelConfig(newModelName);
-    if (cfg.efforts.length > 0) {
-      if (!effort || !cfg.efforts.includes(effort)) {
-        setEffort(cfg.defaultEffort || cfg.efforts[0]);
-      }
-    } else {
-      setEffort(undefined);
-    }
-  };
-
-  const handleAllowOnceAndContinue = () => {
-    clearPermissionPrompt();
-    send('请继续执行未完成的分析任务', model, effort, workspace, true);
-  };
-
-  const handleAddToAllowlistAndContinue = async () => {
-    if (permissionPrompt?.command) {
-      try {
-        const cmd = permissionPrompt.command.trim();
-        const firstToken = cmd.split(/\s+/)[0];
-        const baseCmd = firstToken.startsWith('/') ? firstToken.split('/').pop() : firstToken;
-        const pattern = `command(${baseCmd || cmd})`;
-        await fetch('/api/settings/permissions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pattern })
-        });
-      } catch (e) {
-        console.error('Failed to add allow pattern:', e);
-      }
-    }
-    clearPermissionPrompt();
-    send('请继续执行未完成的分析任务', model, effort, workspace, autoApprove);
-  };
+  }, [conversationId, workspace]);
 
   const handleInsertPath = (relPath: string) => {
     chatInputRef.current?.insertSnippet(`@${relPath}`);
   };
 
-  const cleanWorkspaceDisplay = workspace?.startsWith('file://')
-    ? workspace.replace('file://', '')
-    : workspace;
+  const handleAllowOnceAndContinue = () => {
+    clearPermissionPrompt();
+    send('允许执行本次命令，请继续执行下一步任务。', model, effort, workspace, true);
+  };
+
+  const handleAddToAllowlistAndContinue = async () => {
+    if (!permissionPrompt?.command) {
+      handleAllowOnceAndContinue();
+      return;
+    }
+    const cmdRule = `command(${permissionPrompt.command})`;
+    try {
+      await fetch('/api/settings/permissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pattern: cmdRule })
+      });
+    } catch (e) {
+      console.error('Failed to add to allowlist:', e);
+    }
+    clearPermissionPrompt();
+    send(`已将命令 ${permissionPrompt.command} 加入白名单规则，请继续执行任务。`, model, effort, workspace, false);
+  };
+
+  const cleanWorkspaceDisplay = workspace ? (workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace) : undefined;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-background">
-      {/* Top Header Bar with dynamic wrap for mobile/desktop */}
-      <div className="border-b border-border px-3 py-2 flex flex-wrap items-center justify-between gap-y-2 gap-x-2.5 shrink-0 bg-card/50">
-        {/* Left Cluster: Sidebar Toggle, Workspace, Model & Effort Selectors */}
-        <div className="flex flex-wrap items-center gap-2 min-w-0">
+    <div className="flex-1 flex flex-col h-full bg-background text-foreground overflow-hidden">
+      {/* Top Header Controls */}
+      <div className="border-b border-border p-3 flex flex-wrap items-center justify-between gap-2 shrink-0 bg-card/40 select-none">
+        {/* Left Cluster: Sidebar Toggle, Workspace Badge, Model & Effort Selectors */}
+        <div className="flex items-center gap-2 overflow-hidden flex-wrap">
           {(!isOpen || isMobile) && (
             <button
               onClick={toggleSidebar}
-              title="展开侧边栏"
+              title="Toggle Sidebar"
               className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
             >
               <PanelLeftOpen className="w-4 h-4" />
@@ -178,11 +186,11 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
           {/* Model Selector Dropdown */}
           <div className="flex items-center gap-1 shrink-0">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Model:</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t('model')}:</span>
             <select
               value={model}
               onChange={(e) => handleModelChange(e.target.value)}
-              className="border border-input rounded-md px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary truncate max-w-[150px] sm:max-w-[200px]"
+              className="border border-input rounded-md px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary truncate max-w-[150px] sm:max-w-[200px] cursor-pointer"
             >
               {SUPPORTED_MODELS.map((m) => (
                 <option key={m.id} value={m.name}>
@@ -194,25 +202,24 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
           {/* Effort Selector Dropdown (Linked to Model) */}
           <div className="flex items-center gap-1 shrink-0">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Effort:</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t('effort')}:</span>
             {currentModelConfig.efforts.length > 0 ? (
               <select
                 value={effort || currentModelConfig.defaultEffort || currentModelConfig.efforts[0]}
                 onChange={(e) => setEffort(e.target.value as EffortLevel)}
-                className="border border-input rounded-md px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary capitalize"
+                className="border border-input rounded-md px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary capitalize cursor-pointer"
               >
                 {currentModelConfig.efforts.map((lvl) => (
                   <option key={lvl} value={lvl}>
-                    {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
+                    {lvl === 'low' ? t('effortLow') : lvl === 'medium' ? t('effortMedium') : lvl === 'high' ? t('effortHigh') : lvl}
                   </option>
                 ))}
               </select>
             ) : (
               <span
-                title="该模型不支持调整思考强度"
                 className="text-[11px] border border-border/60 rounded px-2 py-0.5 bg-muted/40 text-muted-foreground/70 cursor-not-allowed select-none"
               >
-                Default
+                {t('effortAuto')}
               </span>
             )}
           </div>
@@ -226,10 +233,10 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             disabled={historyLoading || !hasMoreHistory}
             title={
               !hasMoreHistory
-                ? '已加载全部历史对话'
+                ? t('allLoaded')
                 : loadedTurns === 0
-                ? '加载 5 轮历史对话'
-                : `已加载 ${loadedTurns} 轮，点击再加载 5 轮`
+                ? t('loadEarlierMessages')
+                : `${t('loadEarlierMessages')} (+5)`
             }
             className={`text-xs border border-border rounded-md px-2.5 py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
               !hasMoreHistory
@@ -240,12 +247,12 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             <History className={`w-3.5 h-3.5 ${historyLoading ? 'animate-spin' : ''}`} />
             <span>
               {historyLoading
-                ? 'Loading...'
+                ? t('loadingEarlier')
                 : loadedTurns === 0
-                ? 'Load History'
+                ? t('loadEarlierMessages')
                 : hasMoreHistory
-                ? 'Load More'
-                : 'All Loaded'}
+                ? t('loadEarlierMessages')
+                : t('allLoaded')}
             </span>
             {totalTurns !== null && (
               <span className="text-[10px] opacity-75 font-mono">
@@ -257,7 +264,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           {/* Right File Explorer Toggle Button */}
           <button
             onClick={() => setShowFileExplorer(!showFileExplorer)}
-            title={showFileExplorer ? '收起工作区文件目录' : '展开工作区文件目录'}
+            title={t('fileExplorer')}
             className={`text-xs border rounded-md px-2.5 py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
               showFileExplorer
                 ? 'bg-primary text-primary-foreground border-primary shadow-xs'
@@ -265,7 +272,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             }`}
           >
             <FolderTree className="w-3.5 h-3.5" />
-            <span>文件目录</span>
+            <span>{t('fileExplorer')}</span>
           </button>
 
           {/* Open WebTTY Button */}
@@ -274,11 +281,19 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-md px-2.5 py-1 hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Terminal className="w-3.5 h-3.5" />
-            <span>Open WebTTY</span>
+            <span>{t('webtty')}</span>
           </button>
 
           <span className="text-[11px] font-mono uppercase bg-secondary px-2 py-0.5 rounded text-secondary-foreground">
-            {status}
+            {status === 'IDLE'
+              ? t('idle')
+              : status === 'RUNNING'
+              ? t('running')
+              : status === 'PAUSED'
+              ? t('paused')
+              : status === 'WAITING_INPUT'
+              ? t('waitingInput')
+              : status}
           </span>
         </div>
       </div>
@@ -295,19 +310,19 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           {/* Interactive Prompt Banner (if needed) */}
           {interactivePrompt && !permissionPrompt && (
             <div className="bg-amber-500/10 border-t border-amber-500/30 px-4 py-2 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 shrink-0">
-              <span>⚠️ 当前任务可能需要交互式输入或权限确认</span>
+              <span>⚠️ {t('permissionRequired')}</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowTty(true)}
                   className="px-2.5 py-1 bg-amber-500 text-white rounded font-medium hover:bg-amber-600 transition-colors cursor-pointer"
                 >
-                  打开 WebTTY 接管
+                  {t('takeoverTTY')}
                 </button>
                 <button
                   onClick={() => clearInteractivePrompt()}
                   className="text-muted-foreground hover:text-foreground text-xs cursor-pointer"
                 >
-                  忽略
+                  {t('ignore')}
                 </button>
               </div>
             </div>
@@ -319,12 +334,12 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-medium">
                   <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
-                  <span>检测到工具执行需要授权</span>
+                  <span>{t('permissionRequired')}</span>
                 </div>
                 <button
                   onClick={clearPermissionPrompt}
                   className="text-muted-foreground hover:text-foreground text-xs p-0.5 rounded hover:bg-muted cursor-pointer"
-                  title="忽略"
+                  title={t('ignore')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -343,7 +358,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
                   className="px-3 py-1.5 bg-amber-500 text-white rounded-md font-medium hover:bg-amber-600 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>允许本次并继续</span>
+                  <span>{t('allowOnce')}</span>
                 </button>
 
                 {permissionPrompt.command && (
@@ -352,7 +367,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
                     className="px-3 py-1.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
-                    <span>加入白名单并继续</span>
+                    <span>{t('addToWhitelist')}</span>
                   </button>
                 )}
 
@@ -361,14 +376,14 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
                   className="px-2.5 py-1.5 border border-border bg-background rounded-md text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Terminal className="w-3.5 h-3.5" />
-                  <span>WebTTY 接管</span>
+                  <span>{t('takeoverTTY')}</span>
                 </button>
 
                 <button
                   onClick={clearPermissionPrompt}
                   className="ml-auto px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors cursor-pointer"
                 >
-                  忽略
+                  {t('ignore')}
                 </button>
               </div>
             </div>
@@ -379,7 +394,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleAutoApprove}
-                title={autoApprove ? '点击切换为安全受控模式' : '点击切换为全自动执行模式'}
+                title={autoApprove ? t('safeModeDesc') : t('autoApproveDesc')}
                 className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                   autoApprove
                     ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 shadow-xs'
@@ -389,17 +404,17 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
                 {autoApprove ? (
                   <>
                     <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    <span>⚡ 全自动模式 (Auto-Approve)</span>
+                    <span>{t('autoApproveMode')}</span>
                   </>
                 ) : (
                   <>
                     <Shield className="w-3 h-3 text-emerald-500" />
-                    <span>🛡️ 安全受控模式 (Ask Permission)</span>
+                    <span>{t('safeMode')}</span>
                   </>
                 )}
               </button>
               <span className="text-[10px] text-muted-foreground/80 hidden sm:inline">
-                {autoApprove ? '工具执行全自动放行' : '默认拦截未授权命令，支持单次放行或一键白名单'}
+                {autoApprove ? t('autoApproveDesc') : t('safeModeDesc')}
               </span>
             </div>
 
@@ -408,7 +423,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
               className="text-[11px] hover:text-foreground flex items-center gap-1 hover:underline text-muted-foreground"
             >
               <SlidersHorizontal className="w-3 h-3" />
-              <span>白名单规则</span>
+              <span>{t('whitelistRules')}</span>
             </Link>
           </div>
 
@@ -437,20 +452,12 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
       {showTty && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground text-sm">
-              Loading WebTTY…
+            <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           }
         >
-          <WebTTYModal
-            conversationId={conversationId}
-            onClose={() => {
-              setShowTty(false);
-              clearInteractivePrompt();
-              clearPermissionPrompt();
-              refresh();
-            }}
-          />
+          <WebTTYModal conversationId={conversationId} onClose={() => setShowTty(false)} />
         </Suspense>
       )}
     </div>

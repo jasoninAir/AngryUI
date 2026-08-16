@@ -81,6 +81,7 @@ export const ChatInput = forwardRef<
     status: 'IDLE' | 'RUNNING' | 'PAUSED' | 'WAITING_INPUT';
   }
 >(function ChatInput({ conversationId, onSend, onCancel, status }, ref) {
+  const { t } = useLanguage();
   const [text, setText] = useState('');
   const [stagedFiles, setStagedFiles] = useState<StagedAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -308,14 +309,14 @@ export const ChatInput = forwardRef<
                 type="button"
                 onClick={() => removeFile(f.id)}
                 className="p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1 cursor-pointer"
-                title="移除附件"
+                title={t('removeAttachment')}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
           <span className="text-[10px] text-muted-foreground/70 self-center">
-            ({stagedFiles.length} 个附件已就绪)
+            ({stagedFiles.length} {t('attachmentsReady')})
           </span>
         </div>
       )}
@@ -326,7 +327,7 @@ export const ChatInput = forwardRef<
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          title="上传图片或文档附件 (支持直接 Ctrl+V 粘贴截图 / 拖拽文件)"
+          title={t('uploadAttachmentTooltip')}
           className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
         >
           <Paperclip className="w-4 h-4" />
@@ -339,7 +340,7 @@ export const ChatInput = forwardRef<
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKey}
           onPaste={handlePaste}
-          placeholder="输入消息... (Enter 发送, Shift+Enter 换行, 支持直接粘贴/拖拽文件)"
+          placeholder={t('inputPlaceholder')}
           rows={1}
           className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 min-h-[44px] max-h-[40vh] leading-relaxed transition-[height] duration-75"
         />
@@ -351,7 +352,7 @@ export const ChatInput = forwardRef<
             className="h-11 px-4 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 cursor-pointer"
           >
             <Square className="w-3.5 h-3.5 fill-current" />
-            <span>Stop</span>
+            <span>{t('stop')}</span>
           </button>
         ) : (
           <button
@@ -362,12 +363,12 @@ export const ChatInput = forwardRef<
             {isUploading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Uploading...</span>
+                <span>{t('uploading')}</span>
               </>
             ) : (
               <>
                 <Send className="w-3.5 h-3.5" />
-                <span>Send</span>
+                <span>{t('send')}</span>
               </>
             )}
           </button>

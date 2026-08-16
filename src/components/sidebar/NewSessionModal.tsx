@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus, X, Folder, ArrowRight } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface NewSessionModalProps {
   existingWorkspaces: string[];
@@ -11,6 +12,7 @@ interface NewSessionModalProps {
 export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModalProps) {
   const navigate = useNavigate();
   const { isMobile, closeSidebar } = useSidebar();
+  const { t } = useLanguage();
   const [workspacePath, setWorkspacePath] = useState('');
   const [error, setError] = useState('');
 
@@ -26,7 +28,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
     if (e) e.preventDefault();
     const cleanPath = (customPath !== undefined ? customPath : workspacePath).trim();
     if (!cleanPath) {
-      setError('请输入或选择项目工作区目录路径');
+      setError(t('workspacePathPlaceholder'));
       return;
     }
 
@@ -53,13 +55,13 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
               <FolderPlus className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">新建会话 / 指定项目路径</h3>
-              <p className="text-xs text-muted-foreground">在指定的工作区目录中开启新的会话</p>
+              <h3 className="text-base font-semibold">{t('newSessionTitle')}</h3>
+              <p className="text-xs text-muted-foreground">{t('workspacePath')}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent"
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -69,7 +71,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
         <form onSubmit={(e) => handleCreate(e)} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              项目目录路径 (Workspace Directory Path)
+              {t('workspacePath')}
             </label>
             <input
               type="text"
@@ -78,7 +80,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
                 setWorkspacePath(e.target.value);
                 setError('');
               }}
-              placeholder="/Users/username/myprojects/new-project"
+              placeholder={t('workspacePathPlaceholder')}
               autoFocus
               className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
@@ -88,7 +90,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
           {/* Quick Select from Existing Workspaces */}
           {cleanPaths.length > 0 && (
             <div className="space-y-1.5">
-              <span className="text-[11px] text-muted-foreground">常用 / 已有项目路径：</span>
+              <span className="text-[11px] text-muted-foreground">{t('allProjects')}:</span>
               <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
                 {cleanPaths.slice(0, 6).map((p) => (
                   <button
@@ -98,7 +100,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
                       setWorkspacePath(p);
                       setError('');
                     }}
-                    className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-colors truncate max-w-full text-left ${
+                    className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-colors truncate max-w-full text-left cursor-pointer ${
                       workspacePath === p
                         ? 'border-primary bg-primary/10 text-primary font-medium'
                         : 'border-border bg-secondary/50 hover:bg-accent hover:text-accent-foreground'
@@ -117,16 +119,16 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-accent"
+              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-accent cursor-pointer"
             >
-              取消
+              {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={!workspacePath.trim()}
-              className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1"
+              className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
             >
-              <span>创建并进入会话</span>
+              <span>{t('createAndStart')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

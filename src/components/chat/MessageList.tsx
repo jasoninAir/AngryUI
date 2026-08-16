@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { MessageItem } from './MessageItem';
+import { useLanguage } from '@/context/LanguageContext';
 
 export function MessageList({ messages }: { messages: any[] }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (ref.current) {
@@ -12,10 +14,10 @@ export function MessageList({ messages }: { messages: any[] }) {
 
   if (messages.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center p-8 text-center text-xs text-muted-foreground">
+      <div className="h-full flex items-center justify-center p-8 text-center text-xs text-muted-foreground select-none">
         <div className="space-y-1.5 animate-in fade-in duration-200">
-          <p className="font-semibold text-sm text-foreground">✨ 新会话已就绪</p>
-          <p className="opacity-70">在下方输入框中输入内容即可开始对话，模型将在指定工作区目录执行任务</p>
+          <p className="font-semibold text-sm text-foreground">✨ {t('noMessagesYet')}</p>
+          <p className="opacity-70">{t('homeWelcomeDesc')}</p>
         </div>
       </div>
     );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, MessageSquarePlus } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { ConversationItem } from './ConversationItem';
 import type { ConversationSummary } from '@/lib/types';
 
@@ -25,6 +26,7 @@ export function WorkspaceGroup({
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile, closeSidebar } = useSidebar();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(true);
 
   const display = workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace;
@@ -61,8 +63,8 @@ export function WorkspaceGroup({
           {/* New session in this workspace button */}
           <button
             onClick={handleCreateSession}
-            title={`在 ${folderName} 目录下新建会话`}
-            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors"
+            title={`${t('newSession')} (${folderName})`}
+            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -78,7 +80,7 @@ export function WorkspaceGroup({
           {isCurrentNewSessionWorkspace && (
             <div className="rounded px-2 py-1.5 text-xs flex items-center gap-1.5 bg-accent text-accent-foreground font-medium border border-primary/30 my-0.5 animate-in fade-in">
               <MessageSquarePlus className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="truncate">新会话 (准备中...)</span>
+              <span className="truncate">{t('newSession')}...</span>
             </div>
           )}
 
