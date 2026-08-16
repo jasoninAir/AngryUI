@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Pencil, Archive, ArchiveRestore, Trash2, Check, X } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
+import { useSessionStatus } from '@/context/SessionStatusContext';
 import type { ConversationSummary } from '@/lib/types';
 
 interface ConversationItemProps {
@@ -21,6 +22,9 @@ export function ConversationItem({
 }: ConversationItemProps) {
   const navigate = useNavigate();
   const { isMobile, closeSidebar } = useSidebar();
+  const { getStatus } = useSessionStatus();
+  const sessionStatus = getStatus(conv.conversation_id);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(conv.title || '');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -188,6 +192,20 @@ export function ConversationItem({
         className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden pr-1"
         title={conv.title || conv.conversation_id}
       >
+        {/* Real-time Status Dot Indicator: Green for RUNNING, Blue for WAITING_INPUT */}
+        {sessionStatus === 'RUNNING' && (
+          <span className="relative flex h-2 w-2 shrink-0" title="正在运行中 (Running)">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+        )}
+        {sessionStatus === 'WAITING_INPUT' && (
+          <span className="relative flex h-2 w-2 shrink-0" title="等待用户交互/确认 (Waiting for User)">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+          </span>
+        )}
+
         {conv.is_archived && (
           <span title="已归档" className="shrink-0 text-amber-500">
             <Archive className="w-3 h-3" />

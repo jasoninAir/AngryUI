@@ -2,7 +2,7 @@ import { WebSocket } from 'ws';
 import { TurnRunner } from '../../services/turnRunner';
 import { ConversationIndex } from '../../db/conversationIndex';
 import { AgyEvent } from '../../utils/streamParser';
-import { conversationHub } from '../conversationHub';
+import { conversationHub, SessionState } from '../conversationHub';
 
 interface ClientMsg {
   type: string;
@@ -28,11 +28,24 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
   };
 
-  /**
-   * Subscribe to a conversation's events on the hub and forward them to the
-   * WebSocket. This decouples event publication from one connection so that
-   * multi-device / reconnect flows work.
-   */
+  // Send initial all active session statuses
+  send({
+    type: 'session:all_statuses',
+    conversationId: 'system',
+    payload: { statuses: conversationHub.getAllStatuses() },
+    timestamp: Date.now()
+  });
+
+  // Listen to global status changes across any conversation
+  const unsubGlobalStatus = conversationHub.onGlobalStatusChange((convId: string, status: SessionState) => {
+    send({
+      type: 'session:status_update',
+      conversationId: convId,
+      payload: { status },
+      timestamp: Date.now()
+    });
+  });
+
   const subscribeConversation = (convId: string) => {
     if (subscriptions.has(convId)) return;
     const unsubscribe = conversationHub.subscribe(convId, (event: AgyEvent) => {
@@ -59,10 +72,11 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
 
     if (msg.type === 'chat:subscribe' && msg.conversationId) {
       subscribeConversation(msg.conversationId);
+      const currentStatus = conversationHub.getStatus(msg.conversationId);
       send({
         type: 'session:status',
         conversationId: msg.conversationId,
-        payload: { state: 'IDLE' },
+        payload: { state: currentStatus },
         timestamp: Date.now()
       });
       return;
@@ -77,7 +91,6 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       const convId = msg.conversationId;
       const { message, model, effort, dangerouslySkipPermissions, workspace } = msg.payload;
 
-      // Subscribe the sender to the hub so they receive stream events
       subscribeConversation(convId);
 
       const handle = runner.spawn({
@@ -90,6 +103,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       });
 
       activeTurns.set(convId, { abort: handle.abort });
+      conversationHub.setStatus(convId, 'RUNNING');
 
       const timeout = setTimeout(() => handle.abort(), TURN_TIMEOUT_MS);
 
@@ -106,9 +120,14 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
         } finally {
           clearTimeout(timeout);
           activeTurns.delete(convId);
+          conversationHub.setStatus(convId, 'IDLE');
           send({ type: 'session:status', conversationId: convId, payload: { state: 'IDLE' }, timestamp: Date.now() });
         }
       })();
+    }
+
+    if (msg.type === 'chat:set_status' && msg.conversationId && msg.payload?.status) {
+      conversationHub.setStatus(msg.conversationId, msg.payload.status);
     }
 
     if (msg.type === 'chat:cancel' && msg.conversationId) {
@@ -116,6 +135,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       if (turn) {
         turn.abort();
         activeTurns.delete(msg.conversationId);
+        conversationHub.setStatus(msg.conversationId, 'IDLE');
         send({ type: 'session:status', conversationId: msg.conversationId, payload: { state: 'IDLE' }, timestamp: Date.now() });
       }
     }
@@ -128,8 +148,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
   });
 
   ws.on('close', () => {
-    // Unsubscribe from all conversations, but DO NOT abort active turns.
-    // Hub keeps the process alive for other subscribers (multi-device).
+    unsubGlobalStatus();
     for (const u of subscriptions.values()) u();
     subscriptions.clear();
   });

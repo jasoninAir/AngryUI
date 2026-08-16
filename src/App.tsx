@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
+import { SessionStatusProvider } from './context/SessionStatusContext';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { ChatPage } from './pages/ChatPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -27,18 +28,20 @@ function HomePage() {
 export default function App() {
   return (
     <BrowserRouter>
-      <SidebarProvider>
-        <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-          <Sidebar />
-          <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/chat/:conversationId" element={<ChatPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Routes>
-          </main>
-        </div>
-      </SidebarProvider>
+      <SessionStatusProvider>
+        <SidebarProvider>
+          <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+            <Sidebar />
+            <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/chat/:conversationId" element={<ChatPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Routes>
+            </main>
+          </div>
+        </SidebarProvider>
+      </SessionStatusProvider>
     </BrowserRouter>
   );
 }

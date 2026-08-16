@@ -1,7 +1,8 @@
-import { useState, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useConversation } from '@/hooks/useConversation';
 import { useSidebar } from '@/context/SidebarContext';
+import { useSessionStatus } from '@/context/SessionStatusContext';
 import { SUPPORTED_MODELS, getModelConfig, EffortLevel } from '@/lib/models';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
@@ -17,6 +18,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const [searchParams] = useSearchParams();
   const workspaceParam = searchParams.get('workspace') || undefined;
   const { isOpen, isMobile, toggleSidebar } = useSidebar();
+  const { setLocalStatus } = useSessionStatus();
 
   const {
     messages,
@@ -32,6 +34,16 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     hasMoreHistory,
     historyLoading
   } = useConversation(conversationId);
+
+  useEffect(() => {
+    if (interactivePrompt) {
+      setLocalStatus(conversationId, 'WAITING_INPUT');
+    } else if (status === 'RUNNING') {
+      setLocalStatus(conversationId, 'RUNNING');
+    } else {
+      setLocalStatus(conversationId, 'IDLE');
+    }
+  }, [conversationId, interactivePrompt, setLocalStatus, status]);
 
   const [model, setModel] = useState<string>(SUPPORTED_MODELS[0].name);
   const [effort, setEffort] = useState<EffortLevel | undefined>(SUPPORTED_MODELS[0].defaultEffort || 'high');

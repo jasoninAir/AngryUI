@@ -1,9 +1,15 @@
 import { Router } from 'express';
 import { ConversationIndex } from '../db/conversationIndex';
 import { getConversationHistory } from '../services/historyService';
+import { conversationHub } from '../ws/conversationHub';
 
 export function createProjectsRouter(index: ConversationIndex): Router {
   const router = Router();
+
+  // GET /api/sessions/status
+  router.get('/sessions/status', (_req, res) => {
+    res.json({ statuses: conversationHub.getAllStatuses() });
+  });
 
   // GET /api/conversations/:id/history?turns=5&offset=0
   router.get('/conversations/:id/history', (req, res) => {
