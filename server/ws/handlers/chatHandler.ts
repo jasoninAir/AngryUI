@@ -36,16 +36,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
   const subscribeConversation = (convId: string) => {
     if (subscriptions.has(convId)) return;
     const unsubscribe = conversationHub.subscribe(convId, (event: AgyEvent) => {
-      if (event.type === 'step_update' && event.step_type === 'unknown') {
-        send({
-          type: 'chat:interactive_prompt',
-          conversationId: convId,
-          payload: { reason: 'unknown_step' },
-          timestamp: Date.now()
-        });
-      } else {
-        send({ type: 'chat:stream', conversationId: convId, payload: event, timestamp: Date.now() });
-      }
+      send({ type: 'chat:stream', conversationId: convId, payload: event, timestamp: Date.now() });
     });
     subscriptions.set(convId, unsubscribe);
   };

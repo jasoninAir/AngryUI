@@ -36,12 +36,6 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const [model, setModel] = useState(MODELS[0]);
   const [showTty, setShowTty] = useState(false);
 
-  // Auto-open WebTTY when AGY is waiting for an interactive prompt
-  // (ask_permission / ask_question produces `step_type: "unknown"` on the server).
-  useEffect(() => {
-    if (interactivePrompt) setShowTty(true);
-  }, [interactivePrompt]);
-
   const cleanWorkspaceDisplay = workspaceParam?.startsWith('file://')
     ? workspaceParam.replace('file://', '')
     : workspaceParam;
@@ -77,6 +71,25 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         <span className="text-xs text-muted-foreground">{status}</span>
       </div>
       <MessageList messages={messages} />
+      {interactivePrompt && (
+        <div className="bg-amber-500/10 border-t border-amber-500/30 px-4 py-2 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400">
+          <span>⚠️ 当前任务可能需要交互式输入或权限确认</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowTty(true)}
+              className="px-2.5 py-1 bg-amber-500 text-white rounded font-medium hover:bg-amber-600 transition-colors"
+            >
+              打开 WebTTY 接管
+            </button>
+            <button
+              onClick={() => clearInteractivePrompt()}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              忽略
+            </button>
+          </div>
+        </div>
+      )}
       <ChatInput
         onSend={(text) => send(text, model, workspaceParam)}
         onCancel={cancel}
