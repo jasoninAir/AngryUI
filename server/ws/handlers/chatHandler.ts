@@ -111,8 +111,19 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       send({ type: 'session:status', conversationId: convId, payload: { state: 'RUNNING' }, timestamp: Date.now() });
 
       (async () => {
+        let hadPermissionRequired = false;
         try {
           for await (const ev of handle.events) {
+            if (ev.type === 'permission_required') {
+              hadPermissionRequired = true;
+              conversationHub.setStatus(convId, 'WAITING_INPUT');
+              send({
+                type: 'chat:interactive_prompt',
+                conversationId: convId,
+                payload: { tool: ev.tool, command: ev.command, message: ev.message },
+                timestamp: Date.now()
+              });
+            }
             conversationHub.publish(convId, ev);
           }
           send({ type: 'chat:done', conversationId: convId, payload: {}, timestamp: Date.now() });
@@ -121,8 +132,9 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
         } finally {
           clearTimeout(timeout);
           activeTurns.delete(convId);
-          conversationHub.setStatus(convId, 'IDLE');
-          send({ type: 'session:status', conversationId: convId, payload: { state: 'IDLE' }, timestamp: Date.now() });
+          const finalState: SessionState = hadPermissionRequired ? 'WAITING_INPUT' : 'IDLE';
+          conversationHub.setStatus(convId, finalState);
+          send({ type: 'session:status', conversationId: convId, payload: { state: finalState }, timestamp: Date.now() });
 
           // Extract summary from brain transcript and persist to SQLite summaries DB
           try {

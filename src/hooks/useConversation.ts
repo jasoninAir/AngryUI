@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
 import { fetchConversationHistory } from '@/lib/api';
 import { soundManager } from '@/lib/sound';
-import type { AgyEventClient } from '@/lib/types';
+import type { AgyEventClient, WSMessage } from '@/lib/types';
 
 export type Message =
   | { id: string; role: 'user'; text: string; timestamp?: string }
@@ -40,7 +40,7 @@ export function clearSessionCache(id?: string): void {
 
 type State = {
   messages: Message[];
-  status: 'IDLE' | 'RUNNING' | 'PAUSED';
+  status: 'IDLE' | 'RUNNING' | 'PAUSED' | 'WAITING_INPUT';
   interactivePrompt: boolean;
   permissionPrompt?: PermissionPromptInfo | null;
 };
@@ -48,7 +48,7 @@ type State = {
 type Action =
   | { type: 'user'; text: string }
   | { type: 'event'; event: AgyEventClient }
-  | { type: 'status'; status: 'IDLE' | 'RUNNING' | 'PAUSED' }
+  | { type: 'status'; status: 'IDLE' | 'RUNNING' | 'PAUSED' | 'WAITING_INPUT' }
   | { type: 'interactive_prompt'; active: boolean }
   | { type: 'permission_prompt'; info?: PermissionPromptInfo | null }
   | { type: 'prepend_history'; messages: Message[] }
@@ -149,7 +149,6 @@ function wsUrl(): string {
 }
 
 export function useConversation(conversationId: string) {
-  const { send, lastMessage, readyState } = useWebSocket(wsUrl());
   const initialCached = sessionCache.get(conversationId);
 
   const [state, dispatch] = useReducer(reducer, {
@@ -159,12 +158,61 @@ export function useConversation(conversationId: string) {
     permissionPrompt: initialCached?.permissionPrompt || null
   });
   const conversationIdRef = useRef(conversationId);
-  const prevStatusRef = useRef<'IDLE' | 'RUNNING' | 'PAUSED'>('IDLE');
+  const prevStatusRef = useRef<'IDLE' | 'RUNNING' | 'PAUSED' | 'WAITING_INPUT'>('IDLE');
 
   const [loadedTurns, setLoadedTurns] = useState<number>(initialCached?.loadedTurns || 0);
   const [totalTurns, setTotalTurns] = useState<number | null>(initialCached?.totalTurns ?? null);
   const [hasMoreHistory, setHasMoreHistory] = useState<boolean>(initialCached?.hasMoreHistory ?? true);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Direct synchronous WebSocket message handler
+  const handleWsMessage = useCallback((msg: WSMessage) => {
+    if (!msg) return;
+    if (msg.conversationId && msg.conversationId !== conversationIdRef.current) return;
+
+    if (msg.type === 'session:status') {
+      const nextState = msg.payload?.state || 'IDLE';
+      if (prevStatusRef.current === 'RUNNING' && nextState === 'IDLE') {
+        soundManager.playTaskComplete();
+      }
+      prevStatusRef.current = nextState;
+      dispatch({ type: 'status', status: nextState });
+    } else if (msg.type === 'chat:stream') {
+      const ev = msg.payload;
+      if (ev?.type === 'permission_required') {
+        soundManager.playAttentionRequired();
+        dispatch({
+          type: 'permission_prompt',
+          info: {
+            tool: ev.tool || 'command',
+            command: ev.command,
+            message: ev.message || 'Tool permission required'
+          }
+        });
+      }
+      dispatch({ type: 'event', event: ev });
+    } else if (msg.type === 'chat:error') {
+      dispatch({
+        type: 'event',
+        event: { type: 'error', message: msg.payload?.message || 'Chat execution error' }
+      });
+    } else if (msg.type === 'chat:interactive_prompt') {
+      soundManager.playAttentionRequired();
+      if (msg.payload?.command || msg.payload?.tool) {
+        dispatch({
+          type: 'permission_prompt',
+          info: {
+            tool: msg.payload.tool || 'command',
+            command: msg.payload.command,
+            message: msg.payload.message || 'Tool permission required'
+          }
+        });
+      }
+      dispatch({ type: 'interactive_prompt', active: true });
+    }
+  }, []);
+
+  const { send, readyState } = useWebSocket(wsUrl(), handleWsMessage);
 
   // Sync to global sessionCache
   useEffect(() => {
@@ -221,42 +269,6 @@ export function useConversation(conversationId: string) {
       timestamp: Date.now()
     });
   }, [conversationId, send]);
-
-  useEffect(() => {
-    if (!lastMessage) return;
-    if (lastMessage.conversationId !== conversationIdRef.current) return;
-
-    if (lastMessage.type === 'session:status') {
-      const nextState = lastMessage.payload.state;
-      if (prevStatusRef.current === 'RUNNING' && nextState === 'IDLE') {
-        soundManager.playTaskComplete();
-      }
-      prevStatusRef.current = nextState;
-      dispatch({ type: 'status', status: nextState });
-    } else if (lastMessage.type === 'chat:stream') {
-      const ev = lastMessage.payload;
-      if (ev?.type === 'permission_required') {
-        soundManager.playAttentionRequired();
-        dispatch({
-          type: 'permission_prompt',
-          info: {
-            tool: ev.tool || 'command',
-            command: ev.command,
-            message: ev.message || 'Tool permission required'
-          }
-        });
-      }
-      dispatch({ type: 'event', event: ev });
-    } else if (lastMessage.type === 'chat:error') {
-      dispatch({
-        type: 'event',
-        event: { type: 'error', message: lastMessage.payload?.message || 'Chat execution error' }
-      });
-    } else if (lastMessage.type === 'chat:interactive_prompt') {
-      soundManager.playAttentionRequired();
-      dispatch({ type: 'interactive_prompt', active: true });
-    }
-  }, [lastMessage]);
 
   const loadHistory = useCallback(async (limit = 5) => {
     if (historyLoading || !hasMoreHistory) return;
