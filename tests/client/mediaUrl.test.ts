@@ -27,4 +27,11 @@ describe('resolveMediaUrl', () => {
     expect(res.isImage).toBe(false);
     expect(res.filename).toBe('data.csv');
   });
+
+  it('safely handles empty or missing inputs without throwing', () => {
+    const res = resolveMediaUrl('');
+    expect(res.url).toBe('/api/file-preview?path=');
+    expect(res.isImage).toBe(false);
+    expect(res.filename).toBe('attachment');
+  });
 });

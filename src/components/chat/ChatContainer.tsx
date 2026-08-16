@@ -304,7 +304,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           {/* Messages Scroll Area */}
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <MessageList messages={messages} />
+            <MessageList messages={messages} loading={historyLoading} />
           </div>
 
           {/* Interactive Prompt Banner (if needed) */}

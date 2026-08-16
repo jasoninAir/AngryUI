@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ThoughtAccordion } from './ThoughtAccordion';
 import { ToolCard } from './ToolCard';
-import { FileText, FileCode, FileSpreadsheet, ExternalLink, X, ZoomIn } from 'lucide-react';
+import { FileText, FileCode, FileSpreadsheet, ExternalLink, ZoomIn } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 type Message =
-  | { id: string; role: 'user'; text: string }
-  | { id: string; role: 'assistant'; text: string; thought?: string }
+  | { id: string; role: 'user'; text?: string }
+  | { id: string; role: 'assistant'; text?: string; thought?: string }
   | { id: string; role: 'tool'; name: string; input: any; output: string };
 
 interface ParsedAttachment {
@@ -18,7 +19,7 @@ interface ParsedAttachment {
 const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg', '.bmp', '.ico'];
 
 export function resolveMediaUrl(rawPathOrUrl: string): { url: string; isImage: boolean; filename: string } {
-  let clean = rawPathOrUrl.trim();
+  let clean = (rawPathOrUrl || '').trim();
   if (clean.startsWith('file://')) {
     clean = clean.replace(/^file:\/\//, '');
   }
@@ -46,9 +47,9 @@ export function resolveMediaUrl(rawPathOrUrl: string): { url: string; isImage: b
   };
 }
 
-function parseUserAttachments(rawText: string): { attachments: ParsedAttachment[]; cleanText: string } {
+function parseUserAttachments(rawText: string = ''): { attachments: ParsedAttachment[]; cleanText: string } {
   const attachments: ParsedAttachment[] = [];
-  const lines = rawText.split('\n');
+  const lines = (rawText || '').split('\n');
   const remainingLines: string[] = [];
 
   for (const line of lines) {
@@ -89,11 +90,12 @@ function parseUserAttachments(rawText: string): { attachments: ParsedAttachment[
 
 // Parse markdown images inside assistant messages
 function renderAssistantContent(
-  text: string,
+  text: string = '',
   onImageClick: (url: string) => void
 ) {
+  const safeText = text || '';
   // Regex to split on markdown images ![alt](url)
-  const parts = text.split(/(!\[.*?\]\(.*?\))/g);
+  const parts = safeText.split(/(!\[.*?\]\(.*?\))/g);
 
   return parts.map((part, idx) => {
     const match = part.match(/^!\[(.*?)\]\((.*?)\)$/);
@@ -127,7 +129,8 @@ export function MessageItem({ msg }: { msg: Message }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (msg.role === 'user') {
-    const { attachments, cleanText } = parseUserAttachments(msg.text);
+    const rawText = msg.text || '';
+    const { attachments, cleanText } = parseUserAttachments(rawText);
 
     return (
       <div className="flex flex-col items-end gap-1.5 my-1.5">
@@ -175,7 +178,7 @@ export function MessageItem({ msg }: { msg: Message }) {
           )}
 
           {/* Clean User Message Body */}
-          <div className="whitespace-pre-wrap leading-relaxed">{cleanText || msg.text}</div>
+          <div className="whitespace-pre-wrap leading-relaxed">{cleanText || rawText}</div>
         </div>
 
         {/* Lightbox Modal for enlarged image view */}
@@ -215,7 +218,7 @@ export function MessageItem({ msg }: { msg: Message }) {
       <div className="max-w-[85%] rounded-2xl p-3.5 bg-secondary text-secondary-foreground shadow-2xs text-sm">
         {msg.thought && <ThoughtAccordion thought={msg.thought} />}
         <div className="whitespace-pre-wrap leading-relaxed">
-          {renderAssistantContent(msg.text, (url) => setSelectedImage(url))}
+          {renderAssistantContent(msg.text || '', (url) => setSelectedImage(url))}
         </div>
       </div>
 
