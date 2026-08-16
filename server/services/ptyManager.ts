@@ -1,5 +1,10 @@
 import * as pty from 'node-pty';
+import fs from 'fs';
+import path from 'path';
+import { createRequire } from 'module';
 import { getConfig } from '../config';
+
+const require = createRequire(import.meta.url);
 
 export interface PtySession {
   pid: number;
@@ -10,8 +15,36 @@ export interface PtySession {
   kill(): void;
 }
 
+/**
+ * Self-healing helper: ensure node-pty prebuilt binaries (like spawn-helper on macOS/Linux)
+ * have executable permissions (+x). When packages are extracted by npm/npx,
+ * executable bits are sometimes lost, causing `posix_spawnp failed`.
+ */
+function ensureSpawnHelperExecutable(): void {
+  try {
+    const pkgPath = require.resolve('node-pty/package.json');
+    const prebuildsDir = path.join(path.dirname(pkgPath), 'prebuilds');
+    if (fs.existsSync(prebuildsDir)) {
+      const archDirs = fs.readdirSync(prebuildsDir);
+      for (const arch of archDirs) {
+        const helper = path.join(prebuildsDir, arch, 'spawn-helper');
+        if (fs.existsSync(helper)) {
+          const stats = fs.statSync(helper);
+          if ((stats.mode & 0o111) === 0) {
+            fs.chmodSync(helper, 0o755);
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-critical, ignore
+  }
+}
+
 export class PtyManager {
   spawn(conversationId: string): PtySession {
+    ensureSpawnHelperExecutable();
+
     let proc: pty.IPty;
     try {
       proc = pty.spawn(getConfig().agyBin, ['--conversation', conversationId], {
@@ -22,36 +55,20 @@ export class PtyManager {
         env: process.env as { [key: string]: string }
       });
     } catch (e: any) {
-      // node-pty on macOS sometimes fails with posix_spawnp due to entitlement /
-      // signing issues. Provide a no-op session so the WS layer can still
-      // surface the error to the client gracefully.
-      const noop = () => {
-        /* no listeners */
-      };
       const errorMsg = `[WebTTY unavailable] node-pty failed to spawn: ${e.message}`;
       console.error(errorMsg);
-      // Fire the error on a microtask so subscribers attached post-construction
-      // still see it.
-      Promise.resolve().then(() => {
-        /* no-op */
-      });
+
       return {
         pid: -1,
         onData: (cb) => {
-          cb(`\r\n\x1b[31m${errorMsg}\r\n\x1b[0m`);
+          setTimeout(() => {
+            cb(`\r\n\x1b[31m${errorMsg}\r\n\x1b[0m`);
+          }, 50);
         },
-        onExit: () => {
-          /* no listeners */
-        },
-        write: () => {
-          /* no listeners */
-        },
-        resize: () => {
-          /* no listeners */
-        },
-        kill: () => {
-          /* no listeners */
-        }
+        onExit: () => {},
+        write: () => {},
+        resize: () => {},
+        kill: () => {}
       };
     }
 

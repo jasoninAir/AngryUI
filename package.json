@@ -12,6 +12,7 @@
     "dev:client": "vite --host",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist-server/server/index.js",
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/* 2>/dev/null || true",
     "test": "vitest run",
     "test:watch": "vitest"
   },
