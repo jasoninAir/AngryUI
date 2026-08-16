@@ -158,6 +158,7 @@ export function useConversation(conversationId: string) {
     permissionPrompt: initialCached?.permissionPrompt || null
   });
   const conversationIdRef = useRef(conversationId);
+  conversationIdRef.current = conversationId;
   const prevStatusRef = useRef<'IDLE' | 'RUNNING' | 'PAUSED' | 'WAITING_INPUT'>('IDLE');
 
   const [loadedTurns, setLoadedTurns] = useState<number>(initialCached?.loadedTurns || 0);
@@ -214,15 +215,17 @@ export function useConversation(conversationId: string) {
 
   const { send, readyState } = useWebSocket(wsUrl(), handleWsMessage);
 
-  // Sync to global sessionCache
+  // Sync to global sessionCache only when state has messages or turns
   useEffect(() => {
-    sessionCache.set(conversationId, {
-      messages: state.messages,
-      loadedTurns,
-      totalTurns,
-      hasMoreHistory,
-      permissionPrompt: state.permissionPrompt
-    });
+    if (state.messages.length > 0 || loadedTurns > 0 || totalTurns !== null) {
+      sessionCache.set(conversationId, {
+        messages: state.messages,
+        loadedTurns,
+        totalTurns,
+        hasMoreHistory,
+        permissionPrompt: state.permissionPrompt
+      });
+    }
   }, [conversationId, state.messages, loadedTurns, totalTurns, hasMoreHistory, state.permissionPrompt]);
 
   useEffect(() => {
@@ -235,39 +238,52 @@ export function useConversation(conversationId: string) {
       setTotalTurns(existing.totalTurns);
       setHasMoreHistory(existing.hasMoreHistory);
     } else {
-      dispatch({ type: 'reset' });
-      setLoadedTurns(0);
-      setTotalTurns(null);
-      setHasMoreHistory(true);
-
       // Auto load first 5 turns of history on initial open of an existing conversation
+      setHistoryLoading(true);
       fetchConversationHistory(conversationId, 5, 0)
         .then((res) => {
-          if (res && res.messages && res.messages.length > 0 && conversationIdRef.current === conversationId) {
-            dispatch({ type: 'prepend_history', messages: res.messages as Message[] });
+          if (conversationIdRef.current === conversationId && res && res.messages) {
+            const msgs = res.messages as Message[];
+            dispatch({ type: 'prepend_history', messages: msgs });
             setLoadedTurns(res.loadedTurns);
             setTotalTurns(res.totalTurns);
             setHasMoreHistory(res.hasMore);
+            sessionCache.set(conversationId, {
+              messages: msgs,
+              loadedTurns: res.loadedTurns,
+              totalTurns: res.totalTurns,
+              hasMoreHistory: res.hasMore,
+              permissionPrompt: null
+            });
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error('Failed to fetch initial history:', err);
+        })
+        .finally(() => {
+          if (conversationIdRef.current === conversationId) {
+            setHistoryLoading(false);
+          }
+        });
     }
 
-    setHistoryLoading(false);
     prevStatusRef.current = 'IDLE';
 
-    send({
-      type: 'chat:unsubscribe',
-      conversationId: conversationIdRef.current,
-      payload: {},
-      timestamp: Date.now()
-    });
     send({
       type: 'chat:subscribe',
       conversationId,
       payload: {},
       timestamp: Date.now()
     });
+
+    return () => {
+      send({
+        type: 'chat:unsubscribe',
+        conversationId,
+        payload: {},
+        timestamp: Date.now()
+      });
+    };
   }, [conversationId, send]);
 
   const loadHistory = useCallback(async (limit = 5) => {

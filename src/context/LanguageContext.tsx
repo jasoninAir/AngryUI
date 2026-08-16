@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { SupportedLanguage, translations, TranslationKey, LANGUAGE_OPTIONS } from '../i18n/translations';
 
 interface LanguageContextType {
@@ -10,12 +10,14 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 function detectInitialLanguage(): SupportedLanguage {
-  const saved = localStorage.getItem('angryui_language') as SupportedLanguage | null;
-  if (saved && ['en', 'zh-CN', 'zh-TW', 'ja', 'es'].includes(saved)) {
-    return saved;
-  }
+  try {
+    const saved = localStorage.getItem('angryui_language') as SupportedLanguage | null;
+    if (saved && ['en', 'zh-CN', 'zh-TW', 'ja', 'es'].includes(saved)) {
+      return saved;
+    }
+  } catch {}
 
-  const browserLang = navigator.language.toLowerCase();
+  const browserLang = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : 'zh-cn';
   if (browserLang.startsWith('zh-tw') || browserLang.startsWith('zh-hk')) return 'zh-TW';
   if (browserLang.startsWith('zh')) return 'zh-CN';
   if (browserLang.startsWith('ja')) return 'ja';
@@ -26,32 +28,44 @@ function detectInitialLanguage(): SupportedLanguage {
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<SupportedLanguage>(detectInitialLanguage);
 
-  const setLanguage = (lang: SupportedLanguage) => {
+  const setLanguage = useCallback((lang: SupportedLanguage) => {
     setLanguageState(lang);
-    localStorage.setItem('angryui_language', lang);
-  };
+    try {
+      localStorage.setItem('angryui_language', lang);
+    } catch {}
+  }, []);
 
-  const t = (key: TranslationKey, fallback?: string): string => {
-    const langDict = translations[language];
-    if (langDict && key in langDict) {
-      return (langDict as any)[key];
-    }
-    const fallbackDict = translations.en;
-    if (fallbackDict && key in fallbackDict) {
-      return (fallbackDict as any)[key];
-    }
-    return fallback || key;
-  };
+  const t = useCallback(
+    (key: TranslationKey, fallback?: string): string => {
+      const langDict = translations[language];
+      if (langDict && key in langDict) {
+        return (langDict as any)[key];
+      }
+      const fallbackDict = translations.en;
+      if (fallbackDict && key in fallbackDict) {
+        return (fallbackDict as any)[key];
+      }
+      return fallback || key;
+    },
+    [language]
+  );
 
   useEffect(() => {
-    document.documentElement.lang = language;
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = language;
+    }
   }, [language]);
 
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
+  const value = useMemo(
+    () => ({
+      language,
+      setLanguage,
+      t
+    }),
+    [language, setLanguage, t]
   );
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {

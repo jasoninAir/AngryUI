@@ -29,12 +29,24 @@ export function readArchivedIds(): Set<string> {
 
 export function writeArchivedIds(ids: Set<string>): void {
   const filePath = getMetaFilePath();
-  const tmpPath = `${filePath}.tmp`;
+  const dir = path.dirname(filePath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  const tmpPath = `${filePath}.${crypto.randomUUID()}.tmp`;
   const data: ArchiveMetaFile = {
     archivedIds: Array.from(ids)
   };
-  writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
-  renameSync(tmpPath, filePath);
+  try {
+    writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+    renameSync(tmpPath, filePath);
+  } catch (e) {
+    if (existsSync(tmpPath)) {
+      try { unlinkSync(tmpPath); } catch {}
+    }
+    // Fallback direct write
+    writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  }
 }
 
 export function setConversationArchived(conversationId: string, archived: boolean): void {
@@ -84,10 +96,18 @@ export function setCustomTitle(conversationId: string, title: string): void {
   } else {
     current.delete(conversationId);
   }
-  const tmpPath = `${filePath}.tmp`;
+  const tmpPath = `${filePath}.${crypto.randomUUID()}.tmp`;
   const obj = Object.fromEntries(current.entries());
-  writeFileSync(tmpPath, JSON.stringify(obj, null, 2), 'utf-8');
-  renameSync(tmpPath, filePath);
+  try {
+    writeFileSync(tmpPath, JSON.stringify(obj, null, 2), 'utf-8');
+    renameSync(tmpPath, filePath);
+  } catch (e) {
+    if (existsSync(tmpPath)) {
+      try { unlinkSync(tmpPath); } catch {}
+    }
+    // Fallback direct write
+    writeFileSync(filePath, JSON.stringify(obj, null, 2), 'utf-8');
+  }
 }
 
 /**
