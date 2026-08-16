@@ -89,8 +89,6 @@ export function Sidebar() {
           >
             <Plus className="w-4 h-4" />
           </button>
-          {/* Language Switcher (aA icon button) */}
-          <LanguageMenu dropUp={false} />
           {/* Refresh Button */}
           <button
             onClick={() => refresh()}
@@ -100,17 +98,6 @@ export function Sidebar() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          {/* Settings Button */}
-          <Link
-            to="/settings"
-            onClick={() => {
-              if (isMobile) closeSidebar();
-            }}
-            title={t('settings')}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </Link>
           {/* Collapse Sidebar Button */}
           <button
             onClick={toggleSidebar}
@@ -150,27 +137,42 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Bottom Footer: Archive Filter (if any) */}
-      {archivedCount > 0 && (
-        <div className="p-2.5 border-t border-border bg-card/40 flex flex-col gap-2 text-xs">
+      {/* Bottom Footer: Left-aligned Language & Settings, Right-aligned Archive Filter */}
+      <div className="p-2 border-t border-border bg-card/40 flex items-center justify-between text-xs">
+        {/* Left Cluster: Language Selector (aA) & Settings */}
+        <div className="flex items-center gap-1">
+          {/* Language Switcher (aA icon with upward popover) */}
+          <LanguageMenu dropUp={true} />
+
+          {/* Settings Button */}
+          <Link
+            to="/settings"
+            onClick={() => {
+              if (isMobile) closeSidebar();
+            }}
+            title={t('settings')}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center cursor-pointer"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* Right Cluster: Archive Filter (if any) */}
+        {archivedCount > 0 && (
           <button
             onClick={() => setShowArchived(!showArchived)}
-            className={`w-full flex items-center justify-between px-2 py-1.5 rounded transition-colors cursor-pointer ${
+            title={showArchived ? t('hideArchived') : t('showArchived')}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors cursor-pointer text-[11px] ${
               showArchived
                 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium'
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             }`}
           >
-            <span className="flex items-center gap-1.5">
-              <Archive className="w-3.5 h-3.5" />
-              <span>{showArchived ? t('hideArchived') : t('showArchived')}</span>
-            </span>
-            <span className="font-mono text-[11px] bg-background border px-1.5 py-0.2 rounded">
-              {archivedCount}
-            </span>
+            <Archive className="w-3.5 h-3.5" />
+            <span className="font-mono">{archivedCount}</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
   );
 
