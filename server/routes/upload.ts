@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { saveUploadedFiles, getUploadFilePath } from '../services/uploadService';
 
 export function createUploadRouter(): Router {
@@ -27,6 +29,25 @@ export function createUploadRouter(): Router {
       return res.status(404).json({ error: 'File not found' });
     }
     res.sendFile(filePath);
+  });
+
+  // GET /api/file-preview?path=... -> Serve local filesystem image or document preview
+  router.get('/file-preview', (req, res) => {
+    let rawPath = (req.query.path as string) || '';
+    if (!rawPath.trim()) {
+      return res.status(400).json({ error: 'path query parameter is required' });
+    }
+
+    if (rawPath.startsWith('file://')) {
+      rawPath = rawPath.replace(/^file:\/\//, '');
+    }
+
+    const resolved = path.resolve(rawPath.trim());
+    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+      return res.status(404).json({ error: 'File not found on server disk' });
+    }
+
+    res.sendFile(resolved);
   });
 
   return router;

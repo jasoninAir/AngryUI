@@ -9,7 +9,7 @@ import {
   forwardRef,
   useImperativeHandle
 } from 'react';
-import { Send, Square, Paperclip, X, Image, FileText, Loader2 } from 'lucide-react';
+import { Send, Square, Paperclip, X, FileText, Loader2 } from 'lucide-react';
 
 export interface ChatInputHandle {
   insertSnippet: (snippet: string) => void;
@@ -38,6 +38,38 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = (err) => reject(err);
     reader.readAsDataURL(file);
   });
+}
+
+function extractClipboardFiles(clipboardData: DataTransfer | null): File[] {
+  if (!clipboardData) return [];
+  const files: File[] = [];
+
+  // 1. Inspect DataTransferItemList (standard for screenshots & pasted images)
+  if (clipboardData.items && clipboardData.items.length > 0) {
+    for (let i = 0; i < clipboardData.items.length; i++) {
+      const item = clipboardData.items[i];
+      if (item.kind === 'file') {
+        const blob = item.getAsFile();
+        if (blob) {
+          let name = blob.name;
+          if (!name || name === 'image.png' || name === 'blob') {
+            const ext = (blob.type.split('/')[1] || 'png').replace('+xml', '');
+            name = `screenshot_${Date.now()}.${ext}`;
+          }
+          files.push(new File([blob], name, { type: blob.type || 'image/png' }));
+        }
+      }
+    }
+  }
+
+  // 2. Fallback to DataTransfer.files
+  if (files.length === 0 && clipboardData.files && clipboardData.files.length > 0) {
+    for (let i = 0; i < clipboardData.files.length; i++) {
+      files.push(clipboardData.files[i]);
+    }
+  }
+
+  return files;
 }
 
 export const ChatInput = forwardRef<
@@ -115,6 +147,24 @@ export const ChatInput = forwardRef<
     });
   };
 
+  // Global window paste listener for capturing screenshot paste from anywhere on the page
+  useEffect(() => {
+    const handleGlobalPaste = (e: globalThis.ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target !== textareaRef.current && (target.tagName === 'INPUT' || target.isContentEditable)) {
+        return;
+      }
+      const files = extractClipboardFiles(e.clipboardData);
+      if (files.length > 0) {
+        e.preventDefault();
+        addFiles(files);
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, []);
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       addFiles(e.target.files);
@@ -122,11 +172,12 @@ export const ChatInput = forwardRef<
     }
   };
 
-  // Support pasting images or files from clipboard
+  // Direct paste on textarea
   const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+    const files = extractClipboardFiles(e.clipboardData);
+    if (files.length > 0) {
       e.preventDefault();
-      addFiles(e.clipboardData.files);
+      addFiles(files);
     }
   };
 
@@ -275,7 +326,7 @@ export const ChatInput = forwardRef<
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          title="上传图片或文档附件 (支持拖拽/粘贴)"
+          title="上传图片或文档附件 (支持直接 Ctrl+V 粘贴截图 / 拖拽文件)"
           className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
         >
           <Paperclip className="w-4 h-4" />
