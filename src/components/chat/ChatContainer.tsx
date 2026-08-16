@@ -1,9 +1,10 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useConversation } from '@/hooks/useConversation';
+import { useSidebar } from '@/context/SidebarContext';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
-import { Folder, History, Terminal } from 'lucide-react';
+import { Folder, History, Terminal, PanelLeftOpen } from 'lucide-react';
 
 // Code-split the WebTTY component — xterm.js + CSS is heavy and only
 // needed when the user opens the terminal fallback.
@@ -23,6 +24,7 @@ const MODELS = [
 export function ChatContainer({ conversationId }: { conversationId: string }) {
   const [searchParams] = useSearchParams();
   const workspaceParam = searchParams.get('workspace') || undefined;
+  const { isOpen, isMobile, toggleSidebar } = useSidebar();
 
   const {
     messages,
@@ -49,11 +51,21 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Top Header Bar */}
-      <div className="border-b border-border px-4 py-2.5 flex items-center gap-3 shrink-0 bg-card/40">
+      <div className="border-b border-border px-3 py-2 flex items-center gap-2 shrink-0 bg-card/40">
+        {(!isOpen || isMobile) && (
+          <button
+            onClick={toggleSidebar}
+            title="展开侧边栏"
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
+          </button>
+        )}
+
         {cleanWorkspaceDisplay && (
           <div
             title={`Workspace: ${cleanWorkspaceDisplay}`}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 border border-border px-2.5 py-1 rounded-md max-w-[220px] truncate"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 border border-border px-2 py-1 rounded-md max-w-[160px] md:max-w-[220px] truncate shrink-0"
           >
             <Folder className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{cleanWorkspaceDisplay.split('/').filter(Boolean).slice(-2).join('/')}</span>
