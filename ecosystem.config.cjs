@@ -9,7 +9,7 @@ module.exports = {
       max_memory_restart: '300M',
       env: {
         NODE_ENV: 'production',
-        AGY_WEBUI_PORT: 3000,
+        AGY_WEBUI_PORT: 3737,
         AGY_WEBUI_HOST: '0.0.0.0'
       }
     }

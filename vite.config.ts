@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
-const backendPort = process.env.AGY_WEBUI_PORT || process.env.PORT || 3000;
+const backendPort = process.env.AGY_WEBUI_PORT || process.env.PORT || 3737;
 
 export default defineConfig({
   plugins: [react()],

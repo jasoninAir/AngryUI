@@ -78,7 +78,7 @@ You can customize AngryUI via environment variables:
 
 | Environment Variable | Default | Description |
 |----------------------|---------|-------------|
-| `AGY_WEBUI_PORT` | `3000` | Backend Express server port |
+| `AGY_WEBUI_PORT` | `3737` | Backend Express server port (or use `--port <port>`) |
 | `AGY_WEBUI_HOST` | `0.0.0.0` | Bind address (`0.0.0.0` for LAN access, `127.0.0.1` for local-only) |
 | `AGY_WEBUI_TOKEN` | (none) | Optional Bearer authentication token for HTTP & WebSocket |
 | `AGY_BIN` | `~/.local/bin/agy` | Custom path to the `agy` binary |

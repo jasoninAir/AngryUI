@@ -80,7 +80,7 @@ Usage:
   node dist-server/server/index.js [options]
 
 Options:
-  -p, --port <port>       Port to listen on (default: 3000, env: AGY_WEBUI_PORT, PORT)
+  -p, --port <port>       Port to listen on (default: 3737, env: AGY_WEBUI_PORT, PORT)
       --host <host>       Host to bind (default: 0.0.0.0, env: AGY_WEBUI_HOST)
   -t, --token <token>     Optional access token for API protection (env: AGY_WEBUI_TOKEN)
       --help              Show this help message
@@ -97,7 +97,7 @@ Examples:
     cli.port ??
     (process.env.AGY_WEBUI_PORT ? Number(process.env.AGY_WEBUI_PORT) : undefined) ??
     (process.env.PORT ? Number(process.env.PORT) : undefined) ??
-    3000;
+    3737;
 
   const host =
     cli.host ??
