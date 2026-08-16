@@ -1,97 +1,135 @@
-# AGY Web UI
+# 🔥 AngryUI
 
-A browser-based remote interface for the [Antigravity CLI](https://github.com/) (`agy`). Lets you browse projects, chat with the agent, switch models per-turn, manage permissions, and fall back to a full TUI session when the agent asks for interactive input.
+<div align="center">
 
-## Features
+**The Modern, Feature-Rich Web UI & Remote Management Center for [Antigravity CLI](https://github.com/) (`agy`).**
 
-- **Grouped project sidebar** — reads `~/.gemini/antigravity-cli/conversation_summaries.db` directly; live updates via `chokidar`
-- **Streaming chat** — server-side `agy --conversation <id> --print ... --output-format stream-json` per turn, parses JSON events and forwards them over WebSocket
-- **Per-turn model switching** — Gemini Flash / Pro, Claude Sonnet / Opus, GPT-OSS
-- **Conversation Hub** — multiple browser tabs / devices can subscribe to the same conversation; ring buffer replays recent events on reconnect
-- **Permissions editor** — view / add / remove `permissions.allow` patterns in `settings.json` (atomic writes to avoid corruption)
-- **WebTTY fallback** — on-demand `node-pty` + `xterm.js` interactive session for `ask_permission` / `ask_question` prompts the chat engine can't handle
-- **Mobile virtual keys** — Esc / Tab / Ctrl+C / arrows / Enter inline at the bottom of WebTTY
-- **Quota display** — issues `agy /quota` and renders the response
-- **Optional Bearer token auth** — set `AGY_WEBUI_TOKEN` to gate requests
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![React 19](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8.x-purple.svg)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-teal.svg)](https://tailwindcss.com/)
 
-## Quick start
+[Features](#-key-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [Security & Permissions](#-security--dual-risk-control) • [File Explorer](#-workspace-file-explorer) • [Configuration](#-configuration)
+
+</div>
+
+---
+
+## ✨ Why "AngryUI"?
+
+**AngryUI** is a homophonic wordplay inspired by **AGY** (`An-Gr-Y` ➔ `AGY`). It gives Google Antigravity CLI a fast, beautiful, responsive Web interface that turns headless terminal operations into a first-class visual experience for developers across desktop and mobile browsers.
+
+---
+
+## 🚀 Key Features
+
+- ⚡ **Headless Real-time Streaming** — Direct integration with `agy --print --output-format stream-json`, parsing structured events and streaming agent responses, tool invocations, and thinking tokens over WebSocket with zero latency.
+- 🛡️ **Dual-Mode Permission & Security Control**:
+  - **Protected Safe Mode (Default)**: Intercepts unapproved tool calls, rings an synthesized audio attention chime, and displays an on-screen **Dynamic Authorization Card** with 1-click single turn allow, permanent allowlist sync, or WebTTY takeover.
+  - **Auto-Approve Mode**: Automatically runs commands when you want hands-free execution.
+- 📁 **Collapsible Workspace File Explorer**:
+  - Slide-out right-side directory tree anchored to the current Session workspace.
+  - Hierarchical lazy-loading subfolders, semantic filetype icons, and instant search filter.
+  - **1-Click Relative Path Copy (📋)** and **Direct Chat Insertion (➕ `@path`)**.
+- 🔄 **Zero-Lag Session Switching (`sessionCache`)**:
+  - Global in-memory session retention preserves all loaded message histories across session switches in the browser tab.
+  - Auto initial history prefetching on first opening any session.
+- 📝 **Auto-Growing Dynamic Chat Input**:
+  - Expands smoothly with multi-line prompts up to `40vh` with built-in vertical scrolling.
+- 💻 **WebTTY Terminal Modal**:
+  - Full-featured xterm.js WebGL terminal fallback powered by `node-pty` with mobile virtual keys (Esc, Tab, Ctrl+C, arrows).
+- 🗂️ **Hierarchical Project & Session Tree**:
+  - Live session auto-sync from SQLite index and local `brain/` transcripts.
+  - Persistent custom session renaming and workspace path association.
+- 🔊 **Synthesized Web Audio Feedback**:
+  - Multi-tone chimes for task completion and urgent permission/input alerts.
+
+---
+
+## 📦 Quick Start
+
+### Prerequisites
+
+- Node.js >= 18
+- Antigravity CLI installed (`agy` in `~/.local/bin/agy` or in `$PATH`)
+
+### Installation & Launch
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/your-username/angryui.git
+cd angryui
+
+# 2. Install dependencies
 npm install
-npm run dev          # Vite on 5173, Express on 3000
+
+# 3. Start development server (Frontend + Backend concurrently)
+npm run dev
 ```
 
-Open <http://localhost:5173/>.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## Configuration
+---
 
-| Env var | Default | Description |
-|---------|---------|-------------|
-| `AGY_WEBUI_PORT` | `3000` | Express server port |
-| `AGY_WEBUI_HOST` | `0.0.0.0` | Bind address (use `127.0.0.1` for local-only) |
-| `AGY_WEBUI_TOKEN` | (none) | Bearer token; gate HTTP + WebSocket access |
-| `AGY_BIN` | `~/.local/bin/agy` | Override the AGY binary path |
+## 🛠️ Configuration
 
-## Architecture
+You can customize AngryUI via environment variables:
+
+| Environment Variable | Default | Description |
+|----------------------|---------|-------------|
+| `AGY_WEBUI_PORT` | `3000` | Backend Express server port |
+| `AGY_WEBUI_HOST` | `0.0.0.0` | Bind address (`0.0.0.0` for LAN access, `127.0.0.1` for local-only) |
+| `AGY_WEBUI_TOKEN` | (none) | Optional Bearer authentication token for HTTP & WebSocket |
+| `AGY_BIN` | `~/.local/bin/agy` | Custom path to the `agy` binary |
+| `AGY_HOME` | `~/.gemini/antigravity-cli` | Antigravity home directory |
+
+---
+
+## 🏛️ Architecture
 
 ```
-src/                            React frontend
-├── hooks/                      useWebSocket, useConversation, useProjectIndex, useQuota
-├── components/
-│   ├── sidebar/                grouped project tree
-│   ├── chat/                   MessageList, MessageItem, ChatInput, ChatContainer
-│   ├── settings/               PermissionsPanel, QuotaPanel
-│   └── tui/                    WebTTYModal (lazy-loaded)
-├── pages/                      ChatPage, SettingsPage
-└── App.tsx                     Router + sidebar
-
-server/                         Node.js backend
-├── db/                         better-sqlite3 read-only client + index
-├── services/
-│   ├── discoveryService.ts     chokidar watcher on conversation_summaries.db
-│   ├── turnRunner.ts           spawn agy, parse stream-json, async iterator
-│   ├── settingsService.ts      read / atomic write settings.json
-│   └── ptyManager.ts           node-pty wrapper (graceful degradation)
-├── ws/
-│   ├── conversationHub.ts      per-conversation event bus + ring buffer
-│   └── handlers/               chatHandler, tuiHandler
-└── index.ts                    Express + ws + graceful shutdown
+angryui/
+├── src/                          # React 19 Frontend
+│   ├── hooks/                   # useWebSocket, useConversation, useProjectIndex, useQuota
+│   ├── components/
+│   │   ├── chat/                # ChatContainer, MessageList, ChatInput, FileExplorerDrawer
+│   │   ├── sidebar/             # Workspace tree, Project grouping, New Session modal
+│   │   ├── settings/            # PermissionsPanel, QuotaPanel
+│   │   └── tui/                 # WebTTYModal (xterm.js + node-pty)
+│   ├── lib/                     # Sound engine, API client, Model configurations
+│   └── App.tsx                  # Main router and layout
+│
+├── server/                      # Node.js + Express + TypeScript Backend
+│   ├── db/                      # SQLite conversation summaries & custom titles
+│   ├── services/
+│   │   ├── turnRunner.ts        # agy spawn process manager & stream parser
+│   │   ├── fileService.ts       # Safe workspace file tree & relative path listing
+│   │   ├── sessionSummaryService.ts # Transcript parser & summary extractor
+│   │   └── settingsService.ts   # Atomic settings.json permission management
+│   ├── ws/                      # WebSocket ConversationHub event bus & PTY sessions
+│   └── index.ts                 # Server entrypoint & route registration
+│
+└── tests/                       # Vitest unit & integration test suites
 ```
 
-## Scripts
+---
+
+## 🧪 Testing & Building
 
 ```bash
-npm run dev         # start both server and client
-npm run dev:server  # tsx watch server/index.ts
-npm run dev:client  # vite
-npm run build       # vite build + tsc server
-npm start           # node dist-server/server/index.js
-npm test            # vitest run
-npm run test:watch  # vitest
+# Run full automated test suite (51 tests)
+npm test
+
+# Build production bundle (Vite + Server TypeScript)
+npm run build
+
+# Start production server
+npm start
 ```
 
-## How permission prompts work
+---
 
-`agy --print` mode **does not** forward stdin to the agent — it auto-denies any tool call that isn't in `permissions.allow`. The Web UI handles this in two ways:
+## 📄 License
 
-1. **Pre-approved patterns** — Edit the allow list in `/settings` to whitelist commands you'll routinely use.
-2. **WebTTY fallback** — When the agent hits `ask_permission` / `ask_question`, the chat server emits a `chat:interactive_prompt` event. The browser auto-opens WebTTY (or you can click **Open WebTTY** manually). The PTY session runs the full interactive TUI so you can answer the prompt natively.
-
-## Tested assumptions
-
-Verified against the local AGY 1.1.13 install:
-
-- Stream-JSON schema: 5 top-level events (`init`, `step_update`, `result`), 6 step types (`user_input`, `system_message`, `agent_response`, `tool`, `checkpoint`, `unknown`)
-- `--effort` is **NOT supported** by Gemini 3.x Flash models — model selector omits the effort dropdown for them
-- `--conversation <id>` correctly resumes multi-turn context (step_index continues, cache_read_tokens grows)
-- Prompt caching works (`cache_read_tokens` reaches hundreds of thousands)
-
-Tracked in `docs/superpowers/notes/2026-08-15-spike-verification-findings.md`.
-
-## Browser compatibility
-
-Modern Chromium / Firefox / Safari. Mobile browsers work, including WebTTY virtual keys for touch input.
-
-## License
-
-Private / Not for redistribution.
+MIT License. Open source and free for the community.

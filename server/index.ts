@@ -53,7 +53,7 @@ const httpServer = http.createServer(app);
 attachWsServer(httpServer, config.token, index);
 
 httpServer.listen(config.port, config.host, () => {
-  console.log(`AGY Web UI server listening on ${config.host}:${config.port}`);
+  console.log(`AngryUI server listening on http://${config.host}:${config.port}`);
 });
 
 // Graceful shutdown

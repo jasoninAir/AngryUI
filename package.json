@@ -1,7 +1,7 @@
 {
-  "name": "agy-webui",
+  "name": "angryui",
   "version": "1.0.0",
-  "description": "",
+  "description": "AngryUI — The Modern Web UI for Antigravity (AGY) CLI",
   "main": "index.js",
   "directories": {
     "doc": "docs"

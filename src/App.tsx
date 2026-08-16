@@ -11,8 +11,8 @@ function HomePage() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center text-sm gap-4">
       <div>
-        <h3 className="text-lg font-bold text-foreground mb-1">AGY WebUI</h3>
-        <p className="text-xs text-muted-foreground">基于浏览器的 Antigravity 远程交互控制台</p>
+        <h3 className="text-lg font-bold text-foreground mb-1">AngryUI</h3>
+        <p className="text-xs text-muted-foreground">基于浏览器的 Antigravity (AGY) 现代交互管理控制中心</p>
       </div>
       <button
         onClick={toggleSidebar}

@@ -68,7 +68,9 @@ export function Sidebar() {
       {/* Top Header */}
       <div className="p-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-base font-bold tracking-tight truncate">AGY WebUI</h2>
+          <h2 className="text-base font-bold tracking-tight truncate bg-gradient-to-r from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent">
+            AngryUI
+          </h2>
           {totalCount > 0 && (
             <span className="text-[10px] bg-secondary text-secondary-foreground font-mono px-1.5 py-0.5 rounded shrink-0">
               {totalCount}
