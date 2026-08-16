@@ -1,7 +1,9 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useConversation } from '@/hooks/useConversation';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
+import { Folder } from 'lucide-react';
 
 // Code-split the WebTTY component — xterm.js + CSS is heavy and only
 // needed when the user opens the terminal fallback.
@@ -19,6 +21,9 @@ const MODELS = [
 ];
 
 export function ChatContainer({ conversationId }: { conversationId: string }) {
+  const [searchParams] = useSearchParams();
+  const workspaceParam = searchParams.get('workspace') || undefined;
+
   const {
     messages,
     status,
@@ -37,14 +42,27 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     if (interactivePrompt) setShowTty(true);
   }, [interactivePrompt]);
 
+  const cleanWorkspaceDisplay = workspaceParam?.startsWith('file://')
+    ? workspaceParam.replace('file://', '')
+    : workspaceParam;
+
   return (
     <div className="flex flex-col h-screen">
       <div className="border-b border-border p-3 flex items-center gap-3">
-        <span className="text-sm text-muted-foreground mr-2">Model:</span>
+        {cleanWorkspaceDisplay && (
+          <div
+            title={`Workspace: ${cleanWorkspaceDisplay}`}
+            className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 border px-2 py-1 rounded max-w-[200px] truncate"
+          >
+            <Folder className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{cleanWorkspaceDisplay.split('/').filter(Boolean).slice(-2).join('/')}</span>
+          </div>
+        )}
+        <span className="text-sm text-muted-foreground mr-1">Model:</span>
         <select
           value={model}
           onChange={(e) => setModel(e.target.value)}
-          className="border border-input rounded px-2 py-1 text-sm"
+          className="border border-input rounded px-2 py-1 text-sm bg-background"
         >
           {MODELS.map((m) => (
             <option key={m}>{m}</option>
@@ -52,14 +70,18 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         </select>
         <button
           onClick={() => setShowTty(true)}
-          className="ml-auto text-xs text-muted-foreground hover:text-foreground border border-border rounded px-2 py-1"
+          className="ml-auto text-xs text-muted-foreground hover:text-foreground border border-border rounded px-2 py-1 hover:bg-accent"
         >
           Open WebTTY
         </button>
         <span className="text-xs text-muted-foreground">{status}</span>
       </div>
       <MessageList messages={messages} />
-      <ChatInput onSend={(text) => send(text, model)} onCancel={cancel} status={status} />
+      <ChatInput
+        onSend={(text) => send(text, model, workspaceParam)}
+        onCancel={cancel}
+        status={status}
+      />
       {showTty && (
         <Suspense fallback={<div className="fixed inset-0 z-50 bg-background flex items-center justify-center text-muted-foreground">Loading WebTTY…</div>}>
           <WebTTYModal

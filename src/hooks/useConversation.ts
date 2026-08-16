@@ -131,13 +131,13 @@ export function useConversation(conversationId: string) {
     }
   }, [lastMessage]);
 
-  const sendPrompt = (text: string, model: string) => {
+  const sendPrompt = (text: string, model: string, workspace?: string) => {
     dispatch({ type: 'user', text });
     dispatch({ type: 'interactive_prompt', active: false });
     send({
       type: 'chat:send',
       conversationId: conversationIdRef.current,
-      payload: { message: text, model },
+      payload: { message: text, model, workspace },
       timestamp: Date.now()
     });
   };

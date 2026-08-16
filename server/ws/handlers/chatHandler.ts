@@ -84,7 +84,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
 
     if (msg.type === 'chat:send' && msg.conversationId && msg.payload) {
       const convId = msg.conversationId;
-      const { message, model, effort, dangerouslySkipPermissions } = msg.payload;
+      const { message, model, effort, dangerouslySkipPermissions, workspace } = msg.payload;
 
       // Subscribe the sender to the hub so they receive stream events
       subscribeConversation(convId);
@@ -94,7 +94,8 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
         message,
         model,
         effort,
-        dangerouslySkipPermissions
+        dangerouslySkipPermissions,
+        cwd: workspace
       });
 
       activeTurns.set(convId, { abort: handle.abort });

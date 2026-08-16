@@ -8,6 +8,7 @@ export interface TurnOptions {
   model?: string;
   effort?: 'low' | 'medium' | 'high';
   dangerouslySkipPermissions?: boolean;
+  cwd?: string;
 }
 
 export interface TurnHandle {
@@ -27,8 +28,15 @@ export class TurnRunner {
       '--print', opts.message
     ];
 
+    let runCwd = process.cwd();
+    if (opts.cwd) {
+      const clean = opts.cwd.startsWith('file://') ? opts.cwd.replace('file://', '') : opts.cwd;
+      if (clean && clean.trim()) runCwd = clean.trim();
+    }
+
     const child: ChildProcessWithoutNullStreams = spawn(getConfig().agyBin, args, {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: runCwd
     });
 
     const queue: AgyEvent[] = [];

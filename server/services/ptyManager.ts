@@ -42,8 +42,14 @@ function ensureSpawnHelperExecutable(): void {
 }
 
 export class PtyManager {
-  spawn(conversationId: string): PtySession {
+  spawn(conversationId: string, cwd?: string): PtySession {
     ensureSpawnHelperExecutable();
+
+    let runCwd = process.cwd();
+    if (cwd) {
+      const clean = cwd.startsWith('file://') ? cwd.replace('file://', '') : cwd;
+      if (clean && clean.trim()) runCwd = clean.trim();
+    }
 
     let proc: pty.IPty;
     try {
@@ -51,7 +57,7 @@ export class PtyManager {
         name: 'xterm-color',
         cols: 80,
         rows: 24,
-        cwd: process.cwd(),
+        cwd: runCwd,
         env: process.env as { [key: string]: string }
       });
     } catch (e: any) {
