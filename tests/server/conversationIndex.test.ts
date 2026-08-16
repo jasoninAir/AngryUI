@@ -74,4 +74,22 @@ describe('ConversationIndex', () => {
     expect(idx.archive(testId, false)).toBe(true);
     expect(idx.getById(testId)?.is_archived).toBe(false);
   });
+
+  it('rename persists title across index.load() reloads', () => {
+    const sample = idx.getAll()[0];
+    if (sample) {
+      const originalTitle = sample.title;
+      const renamedTitle = `Renamed-Title-${Date.now()}`;
+      expect(idx.rename(sample.conversation_id, renamedTitle)).toBe(true);
+      expect(idx.getById(sample.conversation_id)?.title).toBe(renamedTitle);
+
+      // Reload index
+      const newIdx = new ConversationIndex();
+      newIdx.load();
+      expect(newIdx.getById(sample.conversation_id)?.title).toBe(renamedTitle);
+
+      // Restore original
+      idx.rename(sample.conversation_id, originalTitle);
+    }
+  });
 });

@@ -51,6 +51,41 @@ export function isConversationArchived(conversationId: string): boolean {
   return readArchivedIds().has(conversationId);
 }
 
+function getCustomTitlesPath(): string {
+  const dir = getConfig().webuiHome;
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  return path.join(dir, 'custom-titles.json');
+}
+
+export function readCustomTitles(): Map<string, string> {
+  const filePath = getCustomTitlesPath();
+  if (!existsSync(filePath)) {
+    return new Map<string, string>();
+  }
+  try {
+    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
+    return new Map(Object.entries(raw || {}));
+  } catch {
+    return new Map<string, string>();
+  }
+}
+
+export function setCustomTitle(conversationId: string, title: string): void {
+  const filePath = getCustomTitlesPath();
+  const current = readCustomTitles();
+  if (title && title.trim()) {
+    current.set(conversationId, title.trim());
+  } else {
+    current.delete(conversationId);
+  }
+  const tmpPath = `${filePath}.tmp`;
+  const obj = Object.fromEntries(current.entries());
+  writeFileSync(tmpPath, JSON.stringify(obj, null, 2), 'utf-8');
+  renameSync(tmpPath, filePath);
+}
+
 /**
  * Permanently delete all local filesystem artifacts, conversation databases,
  * brain directories, and history entries associated with a conversation.
@@ -89,7 +124,10 @@ export function deleteLocalSessionFiles(conversationId: string): void {
     } catch {}
   }
 
-  // 4. History log file (~/.gemini/antigravity-cli/history.jsonl)
+  // 4. Custom title cleanup
+  setCustomTitle(conversationId, '');
+
+  // 5. History log file (~/.gemini/antigravity-cli/history.jsonl)
   const historyPath = path.join(agyHome, 'history.jsonl');
   if (existsSync(historyPath)) {
     try {

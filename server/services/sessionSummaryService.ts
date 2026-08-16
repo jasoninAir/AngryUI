@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { getConfig } from '../config';
-import { openConversationDbWrite, ConversationSummary } from '../db/sqliteClient';
+import { openConversationDbWrite, openConversationDb, ConversationSummary } from '../db/sqliteClient';
+import { readCustomTitles } from './sessionMetaService';
 
 export function cleanUserPrompt(raw: string): string {
   let text = raw;
@@ -97,6 +98,10 @@ export function extractSessionSummary(
 
 export function upsertConversationSummary(summary: ConversationSummary): void {
   try {
+    const customTitles = readCustomTitles();
+    const customTitle = customTitles.get(summary.conversation_id);
+    const titleToSave = customTitle || summary.title;
+
     const db = openConversationDbWrite();
     const stmt = db.prepare(`
       INSERT INTO conversation_summaries (
@@ -106,7 +111,11 @@ export function upsertConversationSummary(summary: ConversationSummary): void {
         last_user_input_time
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(conversation_id) DO UPDATE SET
-        title = excluded.title,
+        title = CASE
+          WHEN ? != '' THEN ?
+          WHEN conversation_summaries.title != '' THEN conversation_summaries.title
+          ELSE excluded.title
+        END,
         preview = excluded.preview,
         step_count = excluded.step_count,
         last_modified_time = excluded.last_modified_time,
@@ -116,7 +125,7 @@ export function upsertConversationSummary(summary: ConversationSummary): void {
 
     stmt.run(
       summary.conversation_id,
-      summary.title,
+      titleToSave,
       summary.preview,
       summary.step_count,
       summary.last_modified_time,
@@ -129,7 +138,9 @@ export function upsertConversationSummary(summary: ConversationSummary): void {
       summary.nesting_depth,
       summary.not_fully_idle ? 1 : 0,
       summary.killed ? 1 : 0,
-      summary.last_user_input_time
+      summary.last_user_input_time,
+      customTitle || '',
+      customTitle || ''
     );
     db.close();
   } catch (e) {
@@ -143,13 +154,19 @@ export function syncUnindexedDiskSessions(): void {
   if (!fs.existsSync(brainDir)) return;
 
   try {
+    const db = openConversationDb();
+    const existingRows = db.prepare('SELECT conversation_id FROM conversation_summaries').all() as any[];
+    const existingSet = new Set<string>(existingRows.map((r) => r.conversation_id));
+
     const entries = fs.readdirSync(brainDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.length > 10) {
         const convId = entry.name;
-        const summary = extractSessionSummary(convId);
-        if (summary) {
-          upsertConversationSummary(summary);
+        if (!existingSet.has(convId)) {
+          const summary = extractSessionSummary(convId);
+          if (summary) {
+            upsertConversationSummary(summary);
+          }
         }
       }
     }

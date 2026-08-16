@@ -6,7 +6,9 @@ import {
 import {
   readArchivedIds,
   setConversationArchived,
-  deleteLocalSessionFiles
+  deleteLocalSessionFiles,
+  readCustomTitles,
+  setCustomTitle
 } from '../services/sessionMetaService';
 import { syncUnindexedDiskSessions } from '../services/sessionSummaryService';
 
@@ -35,9 +37,14 @@ export class ConversationIndex {
     const rows = db.prepare(SELECT_ALL).all() as any[];
     this.byId.clear();
     const archivedIds = readArchivedIds();
+    const customTitles = readCustomTitles();
     for (const row of rows) {
       const parsed = this.parseRow(row);
       parsed.is_archived = archivedIds.has(parsed.conversation_id);
+      const ct = customTitles.get(parsed.conversation_id);
+      if (ct) {
+        parsed.title = ct;
+      }
       this.byId.set(row.conversation_id, parsed);
     }
   }
@@ -74,21 +81,22 @@ export class ConversationIndex {
    */
   rename(conversationId: string, newTitle: string): boolean {
     try {
+      const trimmed = newTitle.trim();
       const db = openConversationDbWrite();
       const stmt = db.prepare(
         'UPDATE conversation_summaries SET title = ? WHERE conversation_id = ?'
       );
-      const res = stmt.run(newTitle, conversationId);
+      const res = stmt.run(trimmed, conversationId);
       db.close();
-      if (res.changes > 0) {
-        const existing = this.byId.get(conversationId);
-        if (existing) {
-          existing.title = newTitle;
-          this.byId.set(conversationId, existing);
-        }
-        return true;
+
+      setCustomTitle(conversationId, trimmed);
+
+      const existing = this.byId.get(conversationId);
+      if (existing) {
+        existing.title = trimmed;
+        this.byId.set(conversationId, existing);
       }
-      return false;
+      return true;
     } catch (e) {
       console.error(`Failed to rename conversation ${conversationId}:`, e);
       return false;

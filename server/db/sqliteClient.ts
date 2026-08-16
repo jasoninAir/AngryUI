@@ -24,7 +24,7 @@ export interface ConversationSummary {
 let cached: Database.Database | null = null;
 
 export function openConversationDb(): Database.Database {
-  if (cached) return cached;
+  if (cached && cached.open) return cached;
   const dbPath = path.join(getConfig().agyHome, 'conversation_summaries.db');
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   db.pragma('journal_mode = WAL');
