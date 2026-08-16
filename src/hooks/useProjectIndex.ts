@@ -30,8 +30,24 @@ export function useProjectIndex() {
   useEffect(() => {
     setLoading(true);
     refresh().finally(() => setLoading(false));
-    const id = setInterval(refresh, 5000);
-    return () => clearInterval(id);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        refresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    const id = setInterval(() => {
+      if (!document.hidden) {
+        refresh();
+      }
+    }, 5000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      clearInterval(id);
+    };
   }, [refresh]);
 
   const rename = async (conversationId: string, newTitle: string): Promise<boolean> => {
