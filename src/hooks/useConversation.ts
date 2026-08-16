@@ -164,13 +164,18 @@ export function useConversation(conversationId: string) {
     }
   }, [hasMoreHistory, historyLoading, loadedTurns]);
 
-  const sendPrompt = (text: string, model: string, workspace?: string) => {
+  const sendPrompt = (
+    text: string,
+    model: string,
+    effort?: 'low' | 'medium' | 'high',
+    workspace?: string
+  ) => {
     dispatch({ type: 'user', text });
     dispatch({ type: 'interactive_prompt', active: false });
     send({
       type: 'chat:send',
       conversationId: conversationIdRef.current,
-      payload: { message: text, model, workspace },
+      payload: { message: text, model, effort, workspace },
       timestamp: Date.now()
     });
   };
