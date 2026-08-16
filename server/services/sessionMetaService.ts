@@ -74,6 +74,10 @@ export function readCustomTitles(): Map<string, string> {
 
 export function setCustomTitle(conversationId: string, title: string): void {
   const filePath = getCustomTitlesPath();
+  const dir = path.dirname(filePath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
   const current = readCustomTitles();
   if (title && title.trim()) {
     current.set(conversationId, title.trim());
