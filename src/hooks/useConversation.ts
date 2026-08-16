@@ -15,6 +15,29 @@ export interface PermissionPromptInfo {
   message: string;
 }
 
+export interface CachedConversationState {
+  messages: Message[];
+  loadedTurns: number;
+  totalTurns: number | null;
+  hasMoreHistory: boolean;
+  permissionPrompt?: PermissionPromptInfo | null;
+}
+
+// Global In-Memory Cache for all active sessions in the browser tab lifetime
+const sessionCache = new Map<string, CachedConversationState>();
+
+export function getCachedConversation(id: string): CachedConversationState | undefined {
+  return sessionCache.get(id);
+}
+
+export function clearSessionCache(id?: string): void {
+  if (id) {
+    sessionCache.delete(id);
+  } else {
+    sessionCache.clear();
+  }
+}
+
 type State = {
   messages: Message[];
   status: 'IDLE' | 'RUNNING' | 'PAUSED';
@@ -29,10 +52,18 @@ type Action =
   | { type: 'interactive_prompt'; active: boolean }
   | { type: 'permission_prompt'; info?: PermissionPromptInfo | null }
   | { type: 'prepend_history'; messages: Message[] }
+  | { type: 'restore'; state: CachedConversationState }
   | { type: 'reset' };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'restore':
+      return {
+        messages: action.state.messages,
+        status: 'IDLE',
+        interactivePrompt: false,
+        permissionPrompt: action.state.permissionPrompt ?? null
+      };
     case 'prepend_history': {
       // Filter out messages that already exist by ID to avoid duplicates
       const existingIds = new Set(state.messages.map((m) => m.id));
@@ -119,25 +150,61 @@ function wsUrl(): string {
 
 export function useConversation(conversationId: string) {
   const { send, lastMessage, readyState } = useWebSocket(wsUrl());
+  const initialCached = sessionCache.get(conversationId);
+
   const [state, dispatch] = useReducer(reducer, {
-    messages: [],
+    messages: initialCached?.messages || [],
     status: 'IDLE',
     interactivePrompt: false,
-    permissionPrompt: null
+    permissionPrompt: initialCached?.permissionPrompt || null
   });
   const conversationIdRef = useRef(conversationId);
   const prevStatusRef = useRef<'IDLE' | 'RUNNING' | 'PAUSED'>('IDLE');
 
-  const [loadedTurns, setLoadedTurns] = useState(0);
-  const [totalTurns, setTotalTurns] = useState<number | null>(null);
-  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [loadedTurns, setLoadedTurns] = useState<number>(initialCached?.loadedTurns || 0);
+  const [totalTurns, setTotalTurns] = useState<number | null>(initialCached?.totalTurns ?? null);
+  const [hasMoreHistory, setHasMoreHistory] = useState<boolean>(initialCached?.hasMoreHistory ?? true);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Sync to global sessionCache
+  useEffect(() => {
+    sessionCache.set(conversationId, {
+      messages: state.messages,
+      loadedTurns,
+      totalTurns,
+      hasMoreHistory,
+      permissionPrompt: state.permissionPrompt
+    });
+  }, [conversationId, state.messages, loadedTurns, totalTurns, hasMoreHistory, state.permissionPrompt]);
 
   useEffect(() => {
     conversationIdRef.current = conversationId;
-    setLoadedTurns(0);
-    setTotalTurns(null);
-    setHasMoreHistory(true);
+    const existing = sessionCache.get(conversationId);
+
+    if (existing && existing.messages.length > 0) {
+      dispatch({ type: 'restore', state: existing });
+      setLoadedTurns(existing.loadedTurns);
+      setTotalTurns(existing.totalTurns);
+      setHasMoreHistory(existing.hasMoreHistory);
+    } else {
+      dispatch({ type: 'reset' });
+      setLoadedTurns(0);
+      setTotalTurns(null);
+      setHasMoreHistory(true);
+
+      // Auto load first 5 turns of history on initial open of an existing conversation
+      fetchConversationHistory(conversationId, 5, 0)
+        .then((res) => {
+          if (res && res.messages && res.messages.length > 0 && conversationIdRef.current === conversationId) {
+            dispatch({ type: 'prepend_history', messages: res.messages as Message[] });
+            setLoadedTurns(res.loadedTurns);
+            setTotalTurns(res.totalTurns);
+            setHasMoreHistory(res.hasMore);
+          }
+        })
+        .catch(() => {});
+    }
+
     setHistoryLoading(false);
     prevStatusRef.current = 'IDLE';
 
@@ -147,7 +214,6 @@ export function useConversation(conversationId: string) {
       payload: {},
       timestamp: Date.now()
     });
-    dispatch({ type: 'reset' });
     send({
       type: 'chat:subscribe',
       conversationId,
