@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useProjectIndex } from '@/hooks/useProjectIndex';
 import { useSidebar } from '@/context/SidebarContext';
-import { useLanguage, LANGUAGE_OPTIONS } from '@/context/LanguageContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { WorkspaceGroup } from './WorkspaceGroup';
 import { NewSessionModal } from './NewSessionModal';
-import { Archive, RefreshCw, Settings, Plus, PanelLeftClose, Globe } from 'lucide-react';
+import { LanguageMenu } from './LanguageMenu';
+import { Archive, RefreshCw, Settings, Plus, PanelLeftClose } from 'lucide-react';
 
 export function Sidebar() {
   const location = useLocation();
   const { isOpen, isMobile, closeSidebar, toggleSidebar } = useSidebar();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
 
   const {
@@ -88,6 +89,8 @@ export function Sidebar() {
           >
             <Plus className="w-4 h-4" />
           </button>
+          {/* Language Switcher (aA icon button) */}
+          <LanguageMenu dropUp={false} />
           {/* Refresh Button */}
           <button
             onClick={() => refresh()}
@@ -147,10 +150,9 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Bottom Footer: Language Switcher, Archive Filter & Settings */}
-      <div className="p-2.5 border-t border-border bg-card/40 flex flex-col gap-2 text-xs">
-        {/* Archive toggle button */}
-        {archivedCount > 0 && (
+      {/* Bottom Footer: Archive Filter (if any) */}
+      {archivedCount > 0 && (
+        <div className="p-2.5 border-t border-border bg-card/40 flex flex-col gap-2 text-xs">
           <button
             onClick={() => setShowArchived(!showArchived)}
             className={`w-full flex items-center justify-between px-2 py-1.5 rounded transition-colors cursor-pointer ${
@@ -167,28 +169,8 @@ export function Sidebar() {
               {archivedCount}
             </span>
           </button>
-        )}
-
-        {/* Language Switcher Selector */}
-        <div className="flex items-center justify-between px-2 py-1 bg-background border border-border rounded-lg shadow-2xs">
-          <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-            <Globe className="w-3.5 h-3.5 text-primary" />
-            <span className="text-[11px] font-medium">{t('language')}</span>
-          </div>
-
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as any)}
-            className="bg-transparent text-foreground text-xs font-medium focus:outline-none cursor-pointer py-0.5 pl-1"
-          >
-            {LANGUAGE_OPTIONS.map((opt) => (
-              <option key={opt.code} value={opt.code} className="bg-card text-foreground">
-                {opt.flag} {opt.nativeName}
-              </option>
-            ))}
-          </select>
         </div>
-      </div>
+      )}
     </aside>
   );
 
