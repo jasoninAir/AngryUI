@@ -8,6 +8,7 @@ import {
   setConversationArchived,
   deleteLocalSessionFiles
 } from '../services/sessionMetaService';
+import { syncUnindexedDiskSessions } from '../services/sessionSummaryService';
 
 const SELECT_ALL = `
   SELECT
@@ -29,6 +30,7 @@ export class ConversationIndex {
   private byId = new Map<string, ConversationSummary>();
 
   load(): void {
+    syncUnindexedDiskSessions();
     const db = openConversationDb();
     const rows = db.prepare(SELECT_ALL).all() as any[];
     this.byId.clear();

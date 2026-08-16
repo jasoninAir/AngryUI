@@ -3,6 +3,7 @@ import { TurnRunner } from '../../services/turnRunner';
 import { ConversationIndex } from '../../db/conversationIndex';
 import { AgyEvent } from '../../utils/streamParser';
 import { conversationHub, SessionState } from '../conversationHub';
+import { extractSessionSummary, upsertConversationSummary } from '../../services/sessionSummaryService';
 
 interface ClientMsg {
   type: string;
@@ -122,6 +123,17 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
           activeTurns.delete(convId);
           conversationHub.setStatus(convId, 'IDLE');
           send({ type: 'session:status', conversationId: convId, payload: { state: 'IDLE' }, timestamp: Date.now() });
+
+          // Extract summary from brain transcript and persist to SQLite summaries DB
+          try {
+            const summary = extractSessionSummary(convId, workspace);
+            if (summary) {
+              upsertConversationSummary(summary);
+              _index.applyDelta([summary]);
+            }
+          } catch (e) {
+            console.error(`Failed to persist summary for session ${convId}:`, e);
+          }
         }
       })();
     }

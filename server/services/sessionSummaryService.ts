@@ -1,0 +1,159 @@
+import fs from 'fs';
+import path from 'path';
+import { getConfig } from '../config';
+import { openConversationDbWrite, ConversationSummary } from '../db/sqliteClient';
+
+export function cleanUserPrompt(raw: string): string {
+  let text = raw;
+  const reqMatch = text.match(/<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/i);
+  if (reqMatch) {
+    text = reqMatch[1];
+  }
+  // Strip XML-like tags if any
+  text = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return text;
+}
+
+export function extractSessionSummary(
+  conversationId: string,
+  fallbackWorkspace?: string
+): ConversationSummary | null {
+  const agyHome = getConfig().agyHome;
+  const brainDir = path.join(agyHome, 'brain', conversationId);
+  const logFile = path.join(brainDir, '.system_generated', 'logs', 'transcript.jsonl');
+
+  if (!fs.existsSync(logFile)) {
+    return null;
+  }
+
+  let title = '';
+  let preview = '';
+  let stepCount = 0;
+  let workspaceUri = fallbackWorkspace || '';
+  let lastUserInputTime = new Date().toISOString();
+  let lastModifiedTime = new Date().toISOString();
+
+  try {
+    const stats = fs.statSync(logFile);
+    lastModifiedTime = stats.mtime.toISOString();
+  } catch {}
+
+  try {
+    const content = fs.readFileSync(logFile, 'utf-8');
+    const lines = content.split('\n').filter((l) => l.trim().length > 0);
+    stepCount = lines.length;
+
+    for (const line of lines) {
+      try {
+        const row = JSON.parse(line);
+        if (row.type === 'USER_INPUT' || row.source === 'USER_EXPLICIT') {
+          if (!title && row.content) {
+            const clean = cleanUserPrompt(row.content);
+            if (clean) {
+              title = clean.slice(0, 100);
+              preview = clean.slice(0, 200);
+            }
+          }
+          if (row.created_at) {
+            lastUserInputTime = row.created_at;
+          }
+        }
+        // Extract workspace if present in init event cwd
+        if (row.event === 'init' && row.init?.cwd && !workspaceUri) {
+          workspaceUri = row.init.cwd;
+        }
+      } catch {}
+    }
+  } catch (e) {
+    console.warn(`Failed to parse transcript for ${conversationId}:`, e);
+  }
+
+  if (!title) {
+    title = `会话 ${conversationId.slice(0, 8)}`;
+  }
+  if (!workspaceUri) {
+    workspaceUri = fallbackWorkspace || process.cwd();
+  }
+  const cleanWs = workspaceUri.startsWith('file://') ? workspaceUri : `file://${workspaceUri}`;
+
+  return {
+    conversation_id: conversationId,
+    title,
+    preview: preview || title,
+    step_count: stepCount,
+    last_modified_time: lastModifiedTime,
+    workspace_uris: [cleanWs],
+    status: 'COMPLETED',
+    source: 'CLI',
+    project_id: '',
+    agent_name: '',
+    parent_conversation_id: '',
+    nesting_depth: 0,
+    not_fully_idle: false,
+    killed: false,
+    last_user_input_time: lastUserInputTime
+  };
+}
+
+export function upsertConversationSummary(summary: ConversationSummary): void {
+  try {
+    const db = openConversationDbWrite();
+    const stmt = db.prepare(`
+      INSERT INTO conversation_summaries (
+        conversation_id, title, preview, step_count, last_modified_time,
+        workspace_uris, status, source, project_id, agent_name,
+        parent_conversation_id, nesting_depth, not_fully_idle, killed,
+        last_user_input_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(conversation_id) DO UPDATE SET
+        title = excluded.title,
+        preview = excluded.preview,
+        step_count = excluded.step_count,
+        last_modified_time = excluded.last_modified_time,
+        workspace_uris = excluded.workspace_uris,
+        last_user_input_time = excluded.last_user_input_time
+    `);
+
+    stmt.run(
+      summary.conversation_id,
+      summary.title,
+      summary.preview,
+      summary.step_count,
+      summary.last_modified_time,
+      JSON.stringify(summary.workspace_uris),
+      summary.status,
+      summary.source,
+      summary.project_id,
+      summary.agent_name,
+      summary.parent_conversation_id,
+      summary.nesting_depth,
+      summary.not_fully_idle ? 1 : 0,
+      summary.killed ? 1 : 0,
+      summary.last_user_input_time
+    );
+    db.close();
+  } catch (e) {
+    console.error(`Failed to upsert conversation summary for ${summary.conversation_id}:`, e);
+  }
+}
+
+export function syncUnindexedDiskSessions(): void {
+  const agyHome = getConfig().agyHome;
+  const brainDir = path.join(agyHome, 'brain');
+  if (!fs.existsSync(brainDir)) return;
+
+  try {
+    const entries = fs.readdirSync(brainDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && entry.name.length > 10) {
+        const convId = entry.name;
+        const summary = extractSessionSummary(convId);
+        if (summary) {
+          upsertConversationSummary(summary);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to sync disk sessions:', e);
+  }
+}
