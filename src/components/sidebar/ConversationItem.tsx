@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Pencil, Archive, ArchiveRestore, Trash2, Check, X } from 'lucide-react';
+import { useSidebar } from '@/context/SidebarContext';
 import type { ConversationSummary } from '@/lib/types';
 
 interface ConversationItemProps {
@@ -19,6 +20,7 @@ export function ConversationItem({
   onDelete
 }: ConversationItemProps) {
   const navigate = useNavigate();
+  const { isMobile, closeSidebar } = useSidebar();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(conv.title || '');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -180,6 +182,9 @@ export function ConversationItem({
     >
       <Link
         to={`/chat/${conv.conversation_id}`}
+        onClick={() => {
+          if (isMobile) closeSidebar();
+        }}
         className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden pr-1"
         title={conv.title || conv.conversation_id}
       >
