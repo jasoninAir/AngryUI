@@ -70,4 +70,36 @@ describe('parseStreamLine', () => {
   it('returns null for unknown event', () => {
     expect(parseStreamLine(JSON.stringify({ event: 'mystery' }))).toBeNull();
   });
+
+  it('parses jetski permission denial line', () => {
+    const raw = 'jetski: no output produced — a tool required the "command" permission that headless mode cannot prompt for, so it was auto-denied.';
+    const evt = parseStreamLine(raw);
+    expect(evt?.type).toBe('permission_required');
+    if (evt?.type === 'permission_required') {
+      expect(evt.tool).toBe('command');
+    }
+  });
+
+  it('parses step_update tool error permission denial', () => {
+    const raw = JSON.stringify({
+      event: 'step_update',
+      step_update: {
+        step_index: 28,
+        state: 'ERROR',
+        step_type: 'tool',
+        tool_name: 'run_command',
+        tool_info: {
+          name: 'run_command',
+          parameters: { CommandLine: 'find /Users/test -type d' },
+          error: { type: 'TOOL_ERROR', message: 'User denied permission to run command:\nfind /Users/test -type d' }
+        }
+      }
+    });
+    const evt = parseStreamLine(raw);
+    expect(evt?.type).toBe('permission_required');
+    if (evt?.type === 'permission_required') {
+      expect(evt.command).toBe('find /Users/test -type d');
+      expect(evt.tool).toBe('run_command');
+    }
+  });
 });

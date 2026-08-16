@@ -9,10 +9,17 @@ export type Message =
   | { id: string; role: 'assistant'; text: string; toolCalls?: any[]; thought?: string; timestamp?: string }
   | { id: string; role: 'tool'; name: string; input: any; output: string; timestamp?: string };
 
+export interface PermissionPromptInfo {
+  tool: string;
+  command?: string;
+  message: string;
+}
+
 type State = {
   messages: Message[];
   status: 'IDLE' | 'RUNNING' | 'PAUSED';
   interactivePrompt: boolean;
+  permissionPrompt?: PermissionPromptInfo | null;
 };
 
 type Action =
@@ -20,6 +27,7 @@ type Action =
   | { type: 'event'; event: AgyEventClient }
   | { type: 'status'; status: 'IDLE' | 'RUNNING' | 'PAUSED' }
   | { type: 'interactive_prompt'; active: boolean }
+  | { type: 'permission_prompt'; info?: PermissionPromptInfo | null }
   | { type: 'prepend_history'; messages: Message[] }
   | { type: 'reset' };
 
@@ -97,8 +105,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, status: action.status };
     case 'interactive_prompt':
       return { ...state, interactivePrompt: action.active };
+    case 'permission_prompt':
+      return { ...state, permissionPrompt: action.info ?? null };
     case 'reset':
-      return { messages: [], status: 'IDLE', interactivePrompt: false };
+      return { messages: [], status: 'IDLE', interactivePrompt: false, permissionPrompt: null };
   }
 }
 
@@ -112,7 +122,8 @@ export function useConversation(conversationId: string) {
   const [state, dispatch] = useReducer(reducer, {
     messages: [],
     status: 'IDLE',
-    interactivePrompt: false
+    interactivePrompt: false,
+    permissionPrompt: null
   });
   const conversationIdRef = useRef(conversationId);
   const prevStatusRef = useRef<'IDLE' | 'RUNNING' | 'PAUSED'>('IDLE');
@@ -157,7 +168,19 @@ export function useConversation(conversationId: string) {
       prevStatusRef.current = nextState;
       dispatch({ type: 'status', status: nextState });
     } else if (lastMessage.type === 'chat:stream') {
-      dispatch({ type: 'event', event: lastMessage.payload });
+      const ev = lastMessage.payload;
+      if (ev?.type === 'permission_required') {
+        soundManager.playAttentionRequired();
+        dispatch({
+          type: 'permission_prompt',
+          info: {
+            tool: ev.tool || 'command',
+            command: ev.command,
+            message: ev.message || 'Tool permission required'
+          }
+        });
+      }
+      dispatch({ type: 'event', event: ev });
     } else if (lastMessage.type === 'chat:error') {
       dispatch({
         type: 'event',
@@ -191,14 +214,16 @@ export function useConversation(conversationId: string) {
     text: string,
     model: string,
     effort?: 'low' | 'medium' | 'high',
-    workspace?: string
+    workspace?: string,
+    dangerouslySkipPermissions?: boolean
   ) => {
     dispatch({ type: 'user', text });
     dispatch({ type: 'interactive_prompt', active: false });
+    dispatch({ type: 'permission_prompt', info: null });
     send({
       type: 'chat:send',
       conversationId: conversationIdRef.current,
-      payload: { message: text, model, effort, workspace },
+      payload: { message: text, model, effort, workspace, dangerouslySkipPermissions },
       timestamp: Date.now()
     });
   };
@@ -214,6 +239,10 @@ export function useConversation(conversationId: string) {
 
   const clearInteractivePrompt = () => {
     dispatch({ type: 'interactive_prompt', active: false });
+  };
+
+  const clearPermissionPrompt = () => {
+    dispatch({ type: 'permission_prompt', info: null });
   };
 
   const refresh = () => {
@@ -238,6 +267,7 @@ export function useConversation(conversationId: string) {
     send: sendPrompt,
     cancel,
     clearInteractivePrompt,
+    clearPermissionPrompt,
     refresh,
     loadHistory,
     loadedTurns,

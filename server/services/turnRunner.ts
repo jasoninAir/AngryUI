@@ -60,7 +60,7 @@ export class TurnRunner {
     }
 
     const formattedModel = formatAgyModel(opts.model, opts.effort);
-    const skipPerms = opts.dangerouslySkipPermissions !== false;
+    const skipPerms = Boolean(opts.dangerouslySkipPermissions);
     const args = [
       '--conversation', opts.conversationId,
       '--add-dir', runCwd,
@@ -88,6 +88,7 @@ export class TurnRunner {
 
     let buffer = '';
     let stderrBuffer = '';
+    let lastProposedCommand = '';
     const stdoutDecoder = new StringDecoder('utf-8');
     const stderrDecoder = new StringDecoder('utf-8');
 
@@ -97,8 +98,23 @@ export class TurnRunner {
       while ((idx = buffer.indexOf('\n')) !== -1) {
         const line = buffer.slice(0, idx);
         buffer = buffer.slice(idx + 1);
+
+        try {
+          const raw = JSON.parse(line);
+          if (raw?.step_update?.tool_info?.parameters?.CommandLine) {
+            lastProposedCommand = raw.step_update.tool_info.parameters.CommandLine;
+          } else if (raw?.step_update?.tool_info?.parameters?.command) {
+            lastProposedCommand = raw.step_update.tool_info.parameters.command;
+          }
+        } catch {}
+
         const evt = parseStreamLine(line);
-        if (evt) push(evt);
+        if (evt) {
+          if (evt.type === 'permission_required' && !evt.command && lastProposedCommand) {
+            evt.command = lastProposedCommand;
+          }
+          push(evt);
+        }
       }
     });
 
@@ -113,10 +129,28 @@ export class TurnRunner {
       // Flush any remaining stdout buffer
       if (buffer.trim()) {
         const evt = parseStreamLine(buffer);
-        if (evt) push(evt);
+        if (evt) {
+          if (evt.type === 'permission_required' && !evt.command && lastProposedCommand) {
+            evt.command = lastProposedCommand;
+          }
+          push(evt);
+        }
       }
-      // Surface CLI errors that came via stderr (e.g. invalid flag, auth expired)
-      if (code !== 0 && code !== null && stderrBuffer.trim()) {
+
+      // Check if process was terminated due to permission denial
+      if (
+        stderrBuffer.includes('jetski:') ||
+        stderrBuffer.includes('permission') ||
+        stderrBuffer.includes('auto-denied') ||
+        buffer.includes('jetski:')
+      ) {
+        push({
+          type: 'permission_required',
+          tool: 'command',
+          command: lastProposedCommand || undefined,
+          message: stderrBuffer.trim() || 'Command permission required by agent'
+        });
+      } else if (code !== 0 && code !== null && stderrBuffer.trim()) {
         push({ type: 'error', message: `CLI exited with code ${code}: ${stderrBuffer.trim()}` });
       }
       closed = true;

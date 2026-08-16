@@ -18,6 +18,12 @@ export type AgyEvent =
       usage?: any;
     }
   | {
+      type: 'permission_required';
+      tool: string;
+      command?: string;
+      message: string;
+    }
+  | {
       type: 'result';
       conversation_id: string;
       status: string;
@@ -36,6 +42,16 @@ export type AgyEvent =
 
 export function parseStreamLine(line: string): AgyEvent | null {
   if (!line.trim()) return null;
+
+  // Check for non-JSON jetski permission denial notices
+  if (line.includes('jetski:') || line.includes('required the "command" permission') || line.includes('auto-denied')) {
+    return {
+      type: 'permission_required',
+      tool: 'command',
+      message: line.trim()
+    };
+  }
+
   let raw: any;
   try {
     raw = JSON.parse(line);
@@ -55,6 +71,21 @@ export function parseStreamLine(line: string): AgyEvent | null {
 
   if (raw.event === 'step_update' && raw.step_update) {
     const su = raw.step_update;
+
+    // Check if this step is a tool permission denial
+    if (
+      su.tool_info?.error?.type === 'TOOL_ERROR' ||
+      (su.tool_info?.error?.message && /denied permission|permission required/i.test(su.tool_info.error.message))
+    ) {
+      const cmd = su.tool_info?.parameters?.CommandLine || su.tool_info?.parameters?.command;
+      return {
+        type: 'permission_required',
+        tool: su.tool_name || 'command',
+        command: typeof cmd === 'string' ? cmd : undefined,
+        message: su.tool_info.error.message || 'Tool permission denied'
+      };
+    }
+
     return {
       type: 'step_update',
       step_index: su.step_index,
@@ -71,6 +102,13 @@ export function parseStreamLine(line: string): AgyEvent | null {
   if (raw.event === 'result' && raw.result) {
     const r = raw.result;
     if (r.status === 'ERROR' || r.error) {
+      if (r.error && /permission/i.test(r.error)) {
+        return {
+          type: 'permission_required',
+          tool: 'command',
+          message: r.error
+        };
+      }
       return {
         type: 'error',
         message: r.error || r.response || 'Agent execution failed'
@@ -88,9 +126,17 @@ export function parseStreamLine(line: string): AgyEvent | null {
   }
 
   if (raw.event === 'error' || raw.type === 'error' || raw.error) {
+    const msg = typeof raw.error === 'string' ? raw.error : raw.error?.message || raw.message || 'Unknown error';
+    if (/permission/i.test(msg)) {
+      return {
+        type: 'permission_required',
+        tool: 'command',
+        message: msg
+      };
+    }
     return {
       type: 'error',
-      message: typeof raw.error === 'string' ? raw.error : raw.error?.message || raw.message || 'Unknown error'
+      message: msg
     };
   }
 
