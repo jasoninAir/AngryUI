@@ -18,6 +18,7 @@ export interface ConversationSummary {
   not_fully_idle: boolean;
   killed: boolean;
   last_user_input_time: string;
+  is_archived?: boolean;
 }
 
 let cached: Database.Database | null = null;
@@ -28,6 +29,13 @@ export function openConversationDb(): Database.Database {
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   db.pragma('journal_mode = WAL');
   cached = db;
+  return db;
+}
+
+export function openConversationDbWrite(): Database.Database {
+  const dbPath = path.join(getConfig().agyHome, 'conversation_summaries.db');
+  const db = new Database(dbPath, { readonly: false, fileMustExist: true });
+  db.pragma('journal_mode = WAL');
   return db;
 }
 

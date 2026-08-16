@@ -16,6 +16,7 @@ export type ConversationSummary = {
   not_fully_idle: boolean;
   killed: boolean;
   last_user_input_time: string;
+  is_archived?: boolean;
 };
 
 export type AgyEventClient =

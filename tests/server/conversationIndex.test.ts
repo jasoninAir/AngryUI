@@ -20,9 +20,12 @@ describe('ConversationIndex', () => {
     expect(Array.isArray(sample.workspace_uris)).toBe(true);
   });
 
-  it('groupByWorkspace returns non-empty groups', () => {
-    const groups = idx.groupByWorkspace();
-    expect(groups.size).toBeGreaterThan(0);
+  it('groupByWorkspace returns structured response with groups array', () => {
+    const res = idx.groupByWorkspace();
+    expect(Array.isArray(res.groups)).toBe(true);
+    expect(res.groups.length).toBeGreaterThan(0);
+    expect(typeof res.totalCount).toBe('number');
+    expect(typeof res.archivedCount).toBe('number');
   });
 
   it('applyDelta inserts new conversation', () => {
@@ -48,5 +51,27 @@ describe('ConversationIndex', () => {
     const after = idx.getAll().length;
     expect(after).toBe(before + 1);
     expect(idx.getById('test-uuid-1')?.title).toBe('Test');
+  });
+
+  it('archive and unarchive toggle session archive status', () => {
+    const testId = 'test-uuid-1';
+    expect(idx.archive(testId, true)).toBe(true);
+    expect(idx.getById(testId)?.is_archived).toBe(true);
+
+    const filtered = idx.groupByWorkspace(false);
+    const foundInActive = filtered.groups.some((g) =>
+      g.conversations.some((c) => c.conversation_id === testId)
+    );
+    expect(foundInActive).toBe(false);
+
+    const withArchived = idx.groupByWorkspace(true);
+    const foundInAll = withArchived.groups.some((g) =>
+      g.conversations.some((c) => c.conversation_id === testId)
+    );
+    expect(foundInAll).toBe(true);
+
+    // Unarchive
+    expect(idx.archive(testId, false)).toBe(true);
+    expect(idx.getById(testId)?.is_archived).toBe(false);
   });
 });
