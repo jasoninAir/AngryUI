@@ -2,9 +2,22 @@ import { Router } from 'express';
 import { ConversationIndex } from '../db/conversationIndex';
 import { getConversationHistory } from '../services/historyService';
 import { conversationHub } from '../ws/conversationHub';
+import { listWorkspaceFiles } from '../services/fileService';
 
 export function createProjectsRouter(index: ConversationIndex): Router {
   const router = Router();
+
+  // GET /api/workspace/files?workspace=...&subDir=...
+  router.get('/workspace/files', (req, res) => {
+    const workspace = (req.query.workspace as string) || process.cwd();
+    const subDir = req.query.subDir as string | undefined;
+    try {
+      const entries = listWorkspaceFiles(workspace, subDir);
+      res.json({ workspace, subDir: subDir || '', entries });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message || 'Failed to list files' });
+    }
+  });
 
   // GET /api/sessions/status
   router.get('/sessions/status', (_req, res) => {

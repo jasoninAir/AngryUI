@@ -1,17 +1,36 @@
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent, forwardRef, useImperativeHandle } from 'react';
 import { Send, Square } from 'lucide-react';
 
-export function ChatInput({
-  onSend,
-  onCancel,
-  status
-}: {
-  onSend: (text: string) => void;
-  onCancel: () => void;
-  status: 'IDLE' | 'RUNNING' | 'PAUSED';
-}) {
+export interface ChatInputHandle {
+  insertSnippet: (snippet: string) => void;
+  focus: () => void;
+}
+
+export const ChatInput = forwardRef<
+  ChatInputHandle,
+  {
+    onSend: (text: string) => void;
+    onCancel: () => void;
+    status: 'IDLE' | 'RUNNING' | 'PAUSED' | 'WAITING_INPUT';
+  }
+>(function ChatInput({ onSend, onCancel, status }, ref) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    insertSnippet: (snippet: string) => {
+      setText((prev) => {
+        const needsSpace = prev.length > 0 && !prev.endsWith(' ') && !prev.endsWith('\n');
+        return prev + (needsSpace ? ' ' : '') + snippet + ' ';
+      });
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 50);
+    },
+    focus: () => {
+      textareaRef.current?.focus();
+    }
+  }));
 
   // Auto-grow textarea height dynamically up to max 40vh of page height
   useEffect(() => {
@@ -35,7 +54,7 @@ export function ChatInput({
   const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (text.trim() && status === 'IDLE') {
+      if (text.trim() && (status === 'IDLE' || status === 'WAITING_INPUT')) {
         onSend(text.trim());
         setText('');
       }
@@ -78,4 +97,4 @@ export function ChatInput({
       )}
     </div>
   );
-}
+});

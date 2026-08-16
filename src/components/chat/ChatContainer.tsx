@@ -1,11 +1,12 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useConversation } from '@/hooks/useConversation';
 import { useSidebar } from '@/context/SidebarContext';
 import { useSessionStatus } from '@/context/SessionStatusContext';
 import { SUPPORTED_MODELS, getModelConfig, EffortLevel } from '@/lib/models';
 import { MessageList } from './MessageList';
-import { ChatInput } from './ChatInput';
+import { ChatInput, ChatInputHandle } from './ChatInput';
+import { FileExplorerDrawer } from './FileExplorerDrawer';
 import {
   Folder,
   History,
@@ -17,6 +18,7 @@ import {
   CheckCircle2,
   PlusCircle,
   SlidersHorizontal,
+  FolderTree,
   X
 } from 'lucide-react';
 
@@ -32,6 +34,8 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const { isOpen, isMobile, toggleSidebar } = useSidebar();
   const { setLocalStatus } = useSessionStatus();
   const [workspace, setWorkspace] = useState<string | undefined>(workspaceParam);
+  const [showFileExplorer, setShowFileExplorer] = useState<boolean>(false);
+  const chatInputRef = useRef<ChatInputHandle>(null);
 
   // Risk control mode: default false (Protected / Safe Mode)
   const [autoApprove, setAutoApprove] = useState<boolean>(() => {
@@ -138,6 +142,10 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     send('请继续执行未完成的分析任务', model, effort, workspace, autoApprove);
   };
 
+  const handleInsertPath = (relPath: string) => {
+    chatInputRef.current?.insertSnippet(`@${relPath}`);
+  };
+
   const cleanWorkspaceDisplay = workspace?.startsWith('file://')
     ? workspace.replace('file://', '')
     : workspace;
@@ -210,7 +218,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           </div>
         </div>
 
-        {/* Right Cluster: Action Buttons (History, WebTTY, Status) */}
+        {/* Right Cluster: Action Buttons (History, File Explorer, WebTTY, Status) */}
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           {/* Load History / Load More Button */}
           <button
@@ -246,6 +254,20 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             )}
           </button>
 
+          {/* Right File Explorer Toggle Button */}
+          <button
+            onClick={() => setShowFileExplorer(!showFileExplorer)}
+            title={showFileExplorer ? '收起工作区文件目录' : '展开工作区文件目录'}
+            className={`text-xs border rounded-md px-2.5 py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
+              showFileExplorer
+                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                : 'text-muted-foreground hover:text-foreground border-border hover:bg-accent'
+            }`}
+          >
+            <FolderTree className="w-3.5 h-3.5" />
+            <span>文件目录</span>
+          </button>
+
           {/* Open WebTTY Button */}
           <button
             onClick={() => setShowTty(true)}
@@ -261,137 +283,152 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         </div>
       </div>
 
-      {/* Messages Scroll Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <MessageList messages={messages} />
-      </div>
-
-      {/* Interactive Prompt Banner (if needed) */}
-      {interactivePrompt && !permissionPrompt && (
-        <div className="bg-amber-500/10 border-t border-amber-500/30 px-4 py-2 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 shrink-0">
-          <span>⚠️ 当前任务可能需要交互式输入或权限确认</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTty(true)}
-              className="px-2.5 py-1 bg-amber-500 text-white rounded font-medium hover:bg-amber-600 transition-colors cursor-pointer"
-            >
-              打开 WebTTY 接管
-            </button>
-            <button
-              onClick={() => clearInteractivePrompt()}
-              className="text-muted-foreground hover:text-foreground text-xs cursor-pointer"
-            >
-              忽略
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Dynamic Authorization Bar right above input */}
-      {permissionPrompt && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mx-3 mb-2 flex flex-col gap-2.5 shadow-sm text-xs shrink-0 animate-in fade-in duration-200">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-medium">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
-              <span>检测到工具执行需要授权</span>
-            </div>
-            <button
-              onClick={clearPermissionPrompt}
-              className="text-muted-foreground hover:text-foreground text-xs p-0.5 rounded hover:bg-muted cursor-pointer"
-              title="忽略"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+      {/* Main Body: Split View between Chat and File Explorer Drawer */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        {/* Left / Center Area: Messages and Chat Input */}
+        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+          {/* Messages Scroll Area */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <MessageList messages={messages} />
           </div>
 
-          {permissionPrompt.command && (
-            <div className="bg-background/90 border border-border/80 rounded-md p-2 font-mono text-[11px] text-foreground break-all select-all">
-              <span className="text-muted-foreground mr-1.5">$</span>
-              {permissionPrompt.command}
+          {/* Interactive Prompt Banner (if needed) */}
+          {interactivePrompt && !permissionPrompt && (
+            <div className="bg-amber-500/10 border-t border-amber-500/30 px-4 py-2 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 shrink-0">
+              <span>⚠️ 当前任务可能需要交互式输入或权限确认</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowTty(true)}
+                  className="px-2.5 py-1 bg-amber-500 text-white rounded font-medium hover:bg-amber-600 transition-colors cursor-pointer"
+                >
+                  打开 WebTTY 接管
+                </button>
+                <button
+                  onClick={() => clearInteractivePrompt()}
+                  className="text-muted-foreground hover:text-foreground text-xs cursor-pointer"
+                >
+                  忽略
+                </button>
+              </div>
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-500/20">
-            <button
-              onClick={handleAllowOnceAndContinue}
-              className="px-3 py-1.5 bg-amber-500 text-white rounded-md font-medium hover:bg-amber-600 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>允许本次并继续</span>
-            </button>
+          {/* Dynamic Authorization Bar right above input */}
+          {permissionPrompt && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mx-3 mb-2 flex flex-col gap-2.5 shadow-sm text-xs shrink-0 animate-in fade-in duration-200">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-medium">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
+                  <span>检测到工具执行需要授权</span>
+                </div>
+                <button
+                  onClick={clearPermissionPrompt}
+                  className="text-muted-foreground hover:text-foreground text-xs p-0.5 rounded hover:bg-muted cursor-pointer"
+                  title="忽略"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
 
-            {permissionPrompt.command && (
+              {permissionPrompt.command && (
+                <div className="bg-background/90 border border-border/80 rounded-md p-2 font-mono text-[11px] text-foreground break-all select-all">
+                  <span className="text-muted-foreground mr-1.5">$</span>
+                  {permissionPrompt.command}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-500/20">
+                <button
+                  onClick={handleAllowOnceAndContinue}
+                  className="px-3 py-1.5 bg-amber-500 text-white rounded-md font-medium hover:bg-amber-600 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>允许本次并继续</span>
+                </button>
+
+                {permissionPrompt.command && (
+                  <button
+                    onClick={handleAddToAllowlistAndContinue}
+                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>加入白名单并继续</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setShowTty(true)}
+                  className="px-2.5 py-1.5 border border-border bg-background rounded-md text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>WebTTY 接管</span>
+                </button>
+
+                <button
+                  onClick={clearPermissionPrompt}
+                  className="ml-auto px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors cursor-pointer"
+                >
+                  忽略
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Permission Mode Toggle Bar (Positioned right above textarea at bottom) */}
+          <div className="px-3 py-1.5 bg-card/40 border-t border-border flex items-center justify-between text-xs text-muted-foreground select-none shrink-0">
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleAddToAllowlistAndContinue}
-                className="px-3 py-1.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                onClick={toggleAutoApprove}
+                title={autoApprove ? '点击切换为安全受控模式' : '点击切换为全自动执行模式'}
+                className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                  autoApprove
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 shadow-xs'
+                    : 'bg-muted/80 border-border text-foreground hover:bg-accent'
+                }`}
               >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>加入白名单并继续</span>
+                {autoApprove ? (
+                  <>
+                    <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    <span>⚡ 全自动模式 (Auto-Approve)</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-3 h-3 text-emerald-500" />
+                    <span>🛡️ 安全受控模式 (Ask Permission)</span>
+                  </>
+                )}
               </button>
-            )}
+              <span className="text-[10px] text-muted-foreground/80 hidden sm:inline">
+                {autoApprove ? '工具执行全自动放行' : '默认拦截未授权命令，支持单次放行或一键白名单'}
+              </span>
+            </div>
 
-            <button
-              onClick={() => setShowTty(true)}
-              className="px-2.5 py-1.5 border border-border bg-background rounded-md text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
+            <Link
+              to="/settings"
+              className="text-[11px] hover:text-foreground flex items-center gap-1 hover:underline text-muted-foreground"
             >
-              <Terminal className="w-3.5 h-3.5" />
-              <span>WebTTY 接管</span>
-            </button>
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>白名单规则</span>
+            </Link>
+          </div>
 
-            <button
-              onClick={clearPermissionPrompt}
-              className="ml-auto px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors cursor-pointer"
-            >
-              忽略
-            </button>
+          {/* Pinned Bottom Input */}
+          <div className="shrink-0">
+            <ChatInput
+              ref={chatInputRef}
+              onSend={(text) => send(text, model, effort, workspace, autoApprove)}
+              onCancel={cancel}
+              status={status}
+            />
           </div>
         </div>
-      )}
 
-      {/* Permission Mode Toggle Bar (Positioned right above textarea at bottom) */}
-      <div className="px-3 py-1.5 bg-card/40 border-t border-border flex items-center justify-between text-xs text-muted-foreground select-none shrink-0">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleAutoApprove}
-            title={autoApprove ? '点击切换为安全受控模式' : '点击切换为全自动执行模式'}
-            className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-              autoApprove
-                ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 shadow-xs'
-                : 'bg-muted/80 border-border text-foreground hover:bg-accent'
-            }`}
-          >
-            {autoApprove ? (
-              <>
-                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                <span>⚡ 全自动模式 (Auto-Approve)</span>
-              </>
-            ) : (
-              <>
-                <Shield className="w-3 h-3 text-emerald-500" />
-                <span>🛡️ 安全受控模式 (Ask Permission)</span>
-              </>
-            )}
-          </button>
-          <span className="text-[10px] text-muted-foreground/80 hidden sm:inline">
-            {autoApprove ? '工具执行全自动放行' : '默认拦截未授权命令，支持单次放行或一键白名单'}
-          </span>
-        </div>
-
-        <Link
-          to="/settings"
-          className="text-[11px] hover:text-foreground flex items-center gap-1 hover:underline text-muted-foreground"
-        >
-          <SlidersHorizontal className="w-3 h-3" />
-          <span>白名单规则</span>
-        </Link>
-      </div>
-
-      {/* Pinned Bottom Input */}
-      <div className="shrink-0">
-        <ChatInput
-          onSend={(text) => send(text, model, effort, workspace, autoApprove)}
-          onCancel={cancel}
-          status={status}
+        {/* Right-Side File Explorer Drawer (Collapsed by default, opens to the left) */}
+        <FileExplorerDrawer
+          workspace={workspace}
+          isOpen={showFileExplorer}
+          onClose={() => setShowFileExplorer(false)}
+          onInsertPath={handleInsertPath}
         />
       </div>
 
