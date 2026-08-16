@@ -12,10 +12,15 @@ function HomePage() {
   const { t } = useLanguage();
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center text-sm gap-4">
-      <div>
-        <h3 className="text-lg font-bold text-foreground mb-1">{t('homeWelcome')}</h3>
-        <p className="text-xs text-muted-foreground">{t('homeWelcomeDesc')}</p>
+    <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center text-sm gap-4 select-none">
+      <div className="flex flex-col items-center">
+        <img
+          src="/logo.png"
+          alt="AngryUI"
+          className="w-16 h-16 rounded-2xl shadow-lg mb-3 object-contain border border-border/60 animate-in zoom-in-95 duration-300"
+        />
+        <h3 className="text-xl font-bold text-foreground mb-1 tracking-tight">{t('homeWelcome')}</h3>
+        <p className="text-xs text-muted-foreground max-w-sm">{t('homeWelcomeDesc')}</p>
       </div>
       <button
         onClick={toggleSidebar}

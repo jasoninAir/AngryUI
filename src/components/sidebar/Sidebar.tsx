@@ -70,7 +70,12 @@ export function Sidebar() {
     >
       {/* Top Header */}
       <div className="p-3 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
+        <Link to="/" className="flex items-center gap-2 min-w-0 group hover:opacity-90 transition-opacity">
+          <img
+            src="/logo.png"
+            alt="AngryUI Logo"
+            className="w-5 h-5 rounded-md object-contain shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
+          />
           <h2 className="text-base font-bold tracking-tight truncate bg-gradient-to-r from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent">
             {t('brandTitle')}
           </h2>
@@ -79,7 +84,7 @@ export function Sidebar() {
               {totalCount}
             </span>
           )}
-        </div>
+        </Link>
         <div className="flex items-center gap-0.5 shrink-0">
           {/* New Project / Session Button (+) */}
           <button
