@@ -30,14 +30,16 @@ export class DiscoveryService {
 
     const dbPath = path.join(cfg.agyHome, 'conversation_summaries.db');
     const historyPath = path.join(cfg.agyHome, 'history.jsonl');
+    const brainPath = path.join(cfg.agyHome, 'brain');
 
-    this.watcher = chokidar.watch([dbPath, historyPath], {
+    this.watcher = chokidar.watch([dbPath, historyPath, brainPath], {
       persistent: true,
       ignoreInitial: true,
+      depth: 3,
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 }
     });
 
-    this.watcher.on('change', () => {
+    this.watcher.on('all', () => {
       this.refresh(onChange);
     });
   }
@@ -47,6 +49,7 @@ export class DiscoveryService {
   }
 
   private refresh(onChange: (event: DiscoveryEvent) => void): void {
+    this.index.load();
     const db = openConversationDb();
     const rows = db.prepare(`
       SELECT conversation_id, title, preview, step_count, last_modified_time,

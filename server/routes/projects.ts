@@ -33,6 +33,7 @@ export function createProjectsRouter(index: ConversationIndex): Router {
   // GET /api/projects?showArchived=true|false
   router.get('/projects', (req, res) => {
     const showArchived = req.query.showArchived === 'true';
+    index.load();
     const result = index.groupByWorkspace(showArchived);
     res.json(result);
   });
