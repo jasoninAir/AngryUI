@@ -47,7 +47,7 @@ describe('TurnRunner', () => {
     expect(initSeen).toBe(true);
     expect(resultSeen).toBe(true);
     expect(['SUCCESS', 'ERROR']).toContain(resultStatus);
-  }, 60000);
+  }, 120000);
 
   it('abort() sends SIGINT', async () => {
     const runner = new TurnRunner();

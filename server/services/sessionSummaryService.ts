@@ -63,6 +63,20 @@ export function extractSessionSummary(
         if (row.event === 'init' && row.init?.cwd && !workspaceUri) {
           workspaceUri = row.init.cwd;
         }
+        // Extract workspace if present in tool calls
+        if (row.tool_calls && Array.isArray(row.tool_calls)) {
+          for (const tc of row.tool_calls) {
+            const rawPath = tc.args?.DirectoryPath || tc.args?.Cwd || tc.args?.SearchPath || tc.args?.AbsolutePath;
+            if (rawPath && typeof rawPath === 'string') {
+              const cleanPath = rawPath.replace(/\\"/g, '').replace(/"/g, '').trim();
+              if (cleanPath.startsWith('/') && !cleanPath.includes('.gemini/antigravity-cli')) {
+                if (!workspaceUri || workspaceUri === process.cwd() || workspaceUri.includes('agy-webui')) {
+                  workspaceUri = cleanPath;
+                }
+              }
+            }
+          }
+        }
       } catch {}
     }
   } catch (e) {

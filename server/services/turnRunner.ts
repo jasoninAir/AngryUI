@@ -60,11 +60,12 @@ export class TurnRunner {
     }
 
     const formattedModel = formatAgyModel(opts.model, opts.effort);
+    const skipPerms = opts.dangerouslySkipPermissions !== false;
     const args = [
       '--conversation', opts.conversationId,
-      ...(formattedModel ? ['--model', formattedModel] : []),
-      ...(opts.dangerouslySkipPermissions ? ['--dangerously-skip-permissions'] : []),
       '--add-dir', runCwd,
+      ...(formattedModel ? ['--model', formattedModel] : []),
+      ...(skipPerms ? ['--dangerously-skip-permissions'] : []),
       '--output-format', 'stream-json',
       '--print', opts.message
     ];
