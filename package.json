@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:server": "tsx watch server/index.ts",
-    "dev:client": "vite --host",
+    "dev:server": "AGY_WEBUI_PORT=3737 tsx watch server/index.ts",
+    "dev:client": "AGY_WEBUI_PORT=3737 vite --host",
     "build:client": "vite build",
     "build:server": "esbuild server/index.ts --platform=node --format=esm --packages=external --bundle --outfile=dist-server/index.js",
     "build": "vite build && esbuild server/index.ts --platform=node --format=esm --packages=external --bundle --outfile=dist-server/index.js",

@@ -90,7 +90,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## 🚢 Production Deployment
 
-In production mode, AngryUI compiles into a unified single-port application. The Express backend serves the optimized React static assets, REST API, and WebSockets directly on port `3737`.
+In production mode, AngryUI compiles into a unified single-port application. The Express backend serves the optimized React static assets, REST API, and WebSockets directly on port `5173`.
 
 ### Option A: Standard Production Launch
 
@@ -98,7 +98,7 @@ In production mode, AngryUI compiles into a unified single-port application. The
 # Build frontend and compile backend
 npm run build
 
-# Start production server on default port 3737
+# Start production server on default port 5173
 npm start
 
 # Or specify custom port via CLI argument or ENV
@@ -130,7 +130,7 @@ You can customize AngryUI via environment variables or CLI flags:
 
 | Parameter / Env Variable | CLI Flag | Default | Description |
 |--------------------------|----------|---------|-------------|
-| `AGY_WEBUI_PORT` | `-p, --port` | `3737` | Server listen port |
+| `AGY_WEBUI_PORT` | `-p, --port` | `5173` | Server listen port |
 | `AGY_WEBUI_HOST` | `--host` | `0.0.0.0` | Bind address (`0.0.0.0` for LAN access, `127.0.0.1` for local-only) |
 | `AGY_WEBUI_TOKEN` | `-t, --token` | (none) | Optional Bearer authentication token for HTTP & WebSocket |
 | `AGY_BIN` | - | `~/.local/bin/agy` | Custom path to the `agy` binary |
