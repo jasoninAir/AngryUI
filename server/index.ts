@@ -55,6 +55,19 @@ discovery.start((event) => {
 const httpServer = http.createServer(app);
 attachWsServer(httpServer, config.token, index);
 
+httpServer.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Error: Port ${config.port} is already in use by another process.`);
+    console.error(`💡 Tip: You can specify a different port using:`);
+    console.error(`   npm start -- --port <available-port>`);
+    console.error(`   or: AGY_WEBUI_PORT=<available-port> npm start\n`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
+});
+
 httpServer.listen(config.port, config.host, () => {
   console.log(`AngryUI server listening on http://${config.host}:${config.port}`);
 });
