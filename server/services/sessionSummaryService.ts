@@ -165,6 +165,7 @@ export function upsertConversationSummary(summary: ConversationSummary): void {
 export function syncUnindexedDiskSessions(): void {
   const agyHome = getConfig().agyHome;
   const brainDir = path.join(agyHome, 'brain');
+  const conversationsDir = path.join(agyHome, 'conversations');
   if (!fs.existsSync(brainDir)) return;
 
   try {
@@ -172,6 +173,32 @@ export function syncUnindexedDiskSessions(): void {
     const existingRows = db.prepare('SELECT conversation_id FROM conversation_summaries').all() as any[];
     const existingSet = new Set<string>(existingRows.map((r) => r.conversation_id));
 
+    // 1. Prune ghost sessions (rows in SQLite whose disk files were deleted)
+    const ghostIds: string[] = [];
+    for (const id of existingSet) {
+      const hasBrain = fs.existsSync(path.join(brainDir, id));
+      const hasDb = fs.existsSync(path.join(conversationsDir, `${id}.db`));
+      if (!hasBrain && !hasDb) {
+        ghostIds.push(id);
+      }
+    }
+
+    if (ghostIds.length > 0) {
+      try {
+        const writeDb = openConversationDbWrite();
+        const deleteStmt = writeDb.prepare('DELETE FROM conversation_summaries WHERE conversation_id = ?');
+        for (const ghostId of ghostIds) {
+          deleteStmt.run(ghostId);
+          existingSet.delete(ghostId);
+        }
+        writeDb.close();
+        console.log(`[SessionSync] Pruned ${ghostIds.length} ghost session(s) from SQLite index.`);
+      } catch (err) {
+        console.warn('Failed to prune ghost sessions:', err);
+      }
+    }
+
+    // 2. Index any new/unindexed brain directories on disk
     const entries = fs.readdirSync(brainDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.length > 10) {
