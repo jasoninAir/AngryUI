@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'angryui',
-      script: 'dist-server/server/index.js',
+      script: 'dist-server/index.js',
       instances: 1,
       autorestart: true,
       watch: false,
