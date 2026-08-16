@@ -416,6 +416,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           <div className="shrink-0">
             <ChatInput
               ref={chatInputRef}
+              conversationId={conversationId}
               onSend={(text) => send(text, model, effort, workspace, autoApprove)}
               onCancel={cancel}
               status={status}

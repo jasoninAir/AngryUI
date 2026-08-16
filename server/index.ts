@@ -7,6 +7,7 @@ import { requireAuth } from './utils/tokens';
 import { ConversationIndex } from './db/conversationIndex';
 import { createProjectsRouter } from './routes/projects';
 import { createSettingsRouter } from './routes/settings';
+import { createUploadRouter } from './routes/upload';
 import path from 'path';
 import fs from 'fs';
 import { DiscoveryService } from './services/discoveryService';
@@ -14,7 +15,8 @@ import { DiscoveryService } from './services/discoveryService';
 const config = getConfig();
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Public health endpoint (no auth required)
 app.get('/api/health', (_req, res) => {
@@ -31,6 +33,7 @@ const index = new ConversationIndex();
 index.load();
 app.use('/api', createProjectsRouter(index));
 app.use('/api', createSettingsRouter());
+app.use('/api', createUploadRouter());
 
 // Serve static frontend assets in production mode
 const distPath = path.resolve(process.cwd(), 'dist');

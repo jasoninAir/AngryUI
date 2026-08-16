@@ -1,21 +1,61 @@
-import { useState, useRef, useEffect, KeyboardEvent, forwardRef, useImperativeHandle } from 'react';
-import { Send, Square } from 'lucide-react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  KeyboardEvent,
+  ChangeEvent,
+  ClipboardEvent,
+  DragEvent,
+  forwardRef,
+  useImperativeHandle
+} from 'react';
+import { Send, Square, Paperclip, X, Image, FileText, Loader2 } from 'lucide-react';
 
 export interface ChatInputHandle {
   insertSnippet: (snippet: string) => void;
   focus: () => void;
 }
 
+export interface StagedAttachment {
+  id: string;
+  file: File;
+  name: string;
+  size: number;
+  type: string;
+  previewUrl?: string;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
 export const ChatInput = forwardRef<
   ChatInputHandle,
   {
+    conversationId?: string;
     onSend: (text: string) => void;
     onCancel: () => void;
     status: 'IDLE' | 'RUNNING' | 'PAUSED' | 'WAITING_INPUT';
   }
->(function ChatInput({ onSend, onCancel, status }, ref) {
+>(function ChatInput({ conversationId, onSend, onCancel, status }, ref) {
   const [text, setText] = useState('');
+  const [stagedFiles, setStagedFiles] = useState<StagedAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
     insertSnippet: (snippet: string) => {
@@ -37,7 +77,6 @@ export const ChatInput = forwardRef<
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height temporarily to recalculate accurate scrollHeight on shrink/delete
     textarea.style.height = 'auto';
     const maxHeight = Math.floor(window.innerHeight * 0.4);
     const scrollHeight = textarea.scrollHeight;
@@ -51,50 +90,238 @@ export const ChatInput = forwardRef<
     }
   }, [text]);
 
+  const addFiles = (files: FileList | File[]) => {
+    const newStaged: StagedAttachment[] = Array.from(files).map((f) => {
+      const isImg = f.type.startsWith('image/');
+      return {
+        id: crypto.randomUUID(),
+        file: f,
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        previewUrl: isImg ? URL.createObjectURL(f) : undefined
+      };
+    });
+    setStagedFiles((prev) => [...prev, ...newStaged]);
+  };
+
+  const removeFile = (id: string) => {
+    setStagedFiles((prev) => {
+      const item = prev.find((f) => f.id === id);
+      if (item?.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      return prev.filter((f) => f.id !== id);
+    });
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(e.target.files);
+      e.target.value = '';
+    }
+  };
+
+  // Support pasting images or files from clipboard
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      e.preventDefault();
+      addFiles(e.clipboardData.files);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if ((!text.trim() && stagedFiles.length === 0) || status === 'RUNNING' || isUploading) return;
+
+    let promptText = text.trim();
+
+    if (stagedFiles.length > 0) {
+      setIsUploading(true);
+      try {
+        const payloadFiles = await Promise.all(
+          stagedFiles.map(async (staged) => ({
+            name: staged.name,
+            type: staged.type,
+            data: await fileToBase64(staged.file)
+          }))
+        );
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: conversationId || 'default',
+            files: payloadFiles
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const attachmentsHeader = (data.files || [])
+            .map((f: any) => `[User Attached File: ${f.path} | ${f.url}]`)
+            .join('\n');
+
+          promptText = attachmentsHeader ? `${attachmentsHeader}\n\n${promptText}` : promptText;
+        }
+      } catch (err) {
+        console.error('Failed to upload attachments:', err);
+      } finally {
+        setIsUploading(false);
+        // Clean up object URLs
+        stagedFiles.forEach((f) => {
+          if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+        });
+        setStagedFiles([]);
+      }
+    }
+
+    if (promptText.trim()) {
+      onSend(promptText.trim());
+      setText('');
+    }
+  };
+
   const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (text.trim() && (status === 'IDLE' || status === 'WAITING_INPUT')) {
-        onSend(text.trim());
-        setText('');
-      }
+      handleSubmit();
     }
   };
 
   return (
-    <div className="border-t border-border bg-card/60 p-3 flex items-end gap-2">
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={handleKey}
-        placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
-        rows={1}
-        className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 min-h-[44px] max-h-[40vh] leading-relaxed transition-[height] duration-75"
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`border-t border-border bg-card/60 p-3 flex flex-col gap-2 transition-colors ${
+        isDragging ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/40' : ''
+      }`}
+    >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*,.pdf,.txt,.md,.json,.csv,.yaml,.yml,.docx,.xlsx,.tar,.zip"
+        onChange={handleFileChange}
+        className="hidden"
       />
-      {status === 'RUNNING' ? (
-        <button
-          onClick={onCancel}
-          className="h-11 px-4 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 cursor-pointer"
-        >
-          <Square className="w-3.5 h-3.5 fill-current" />
-          <span>Stop</span>
-        </button>
-      ) : (
-        <button
-          onClick={() => {
-            if (text.trim()) {
-              onSend(text.trim());
-              setText('');
-            }
-          }}
-          disabled={!text.trim()}
-          className="h-11 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 shadow-sm cursor-pointer"
-        >
-          <Send className="w-3.5 h-3.5" />
-          <span>Send</span>
-        </button>
+
+      {/* Staged Attachments Preview Bar */}
+      {stagedFiles.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 pb-1.5 border-b border-border/50">
+          {stagedFiles.map((f) => (
+            <div
+              key={f.id}
+              className="group relative flex items-center gap-2 bg-background border border-border px-2.5 py-1.5 rounded-lg shadow-2xs text-xs"
+            >
+              {f.previewUrl ? (
+                <img
+                  src={f.previewUrl}
+                  alt={f.name}
+                  className="w-8 h-8 rounded object-cover border border-border/60 shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded bg-muted/80 flex items-center justify-center text-muted-foreground shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+              )}
+
+              <div className="max-w-[140px] truncate">
+                <p className="truncate font-medium text-foreground text-[11px]" title={f.name}>
+                  {f.name}
+                </p>
+                <p className="text-[10px] text-muted-foreground font-mono">{formatSize(f.size)}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => removeFile(f.id)}
+                className="p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1 cursor-pointer"
+                title="移除附件"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+          <span className="text-[10px] text-muted-foreground/70 self-center">
+            ({stagedFiles.length} 个附件已就绪)
+          </span>
+        </div>
       )}
+
+      {/* Main Input Row */}
+      <div className="flex items-end gap-2">
+        {/* Attachment Button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          title="上传图片或文档附件 (支持拖拽/粘贴)"
+          className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
+        >
+          <Paperclip className="w-4 h-4" />
+        </button>
+
+        {/* Dynamic Textarea */}
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKey}
+          onPaste={handlePaste}
+          placeholder="输入消息... (Enter 发送, Shift+Enter 换行, 支持直接粘贴/拖拽文件)"
+          rows={1}
+          className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 min-h-[44px] max-h-[40vh] leading-relaxed transition-[height] duration-75"
+        />
+
+        {/* Send / Stop / Uploading Button */}
+        {status === 'RUNNING' ? (
+          <button
+            onClick={onCancel}
+            className="h-11 px-4 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 cursor-pointer"
+          >
+            <Square className="w-3.5 h-3.5 fill-current" />
+            <span>Stop</span>
+          </button>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={(!text.trim() && stagedFiles.length === 0) || isUploading}
+            className="h-11 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 shadow-sm cursor-pointer"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5" />
+                <span>Send</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 });
