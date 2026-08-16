@@ -30,7 +30,7 @@ describe('TurnRunner', () => {
       conversationId: testConversationId,
       message: 'say hi',
       model: 'Gemini 3.7 Flash',
-      effort: 'high'
+      effort: 'low'
     });
 
     let initSeen = false;
