@@ -5,7 +5,8 @@ import {
 } from './sqliteClient';
 import {
   readArchivedIds,
-  setConversationArchived
+  setConversationArchived,
+  deleteLocalSessionFiles
 } from '../services/sessionMetaService';
 
 const SELECT_ALL = `
@@ -105,7 +106,8 @@ export class ConversationIndex {
   }
 
   /**
-   * Delete a conversation from SQLite database and in-memory cache.
+   * Delete a conversation from SQLite database, local disk files (conversations/*.db, brain/*, history.jsonl),
+   * and in-memory cache.
    */
   delete(conversationId: string): boolean {
     try {
@@ -113,9 +115,13 @@ export class ConversationIndex {
       const stmt = db.prepare('DELETE FROM conversation_summaries WHERE conversation_id = ?');
       const res = stmt.run(conversationId);
       db.close();
+
+      // Permanently remove all local database, protobuf, brain folder, and history.jsonl entries
+      deleteLocalSessionFiles(conversationId);
+
       this.byId.delete(conversationId);
       setConversationArchived(conversationId, false);
-      return res.changes > 0;
+      return true;
     } catch (e) {
       console.error(`Failed to delete conversation ${conversationId}:`, e);
       return false;
