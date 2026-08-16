@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
 import { fetchConversationHistory } from '@/lib/api';
+import { soundManager } from '@/lib/sound';
 import type { AgyEventClient } from '@/lib/types';
 
 export type Message =
@@ -105,6 +106,7 @@ export function useConversation(conversationId: string) {
     interactivePrompt: false
   });
   const conversationIdRef = useRef(conversationId);
+  const prevStatusRef = useRef<'IDLE' | 'RUNNING' | 'PAUSED'>('IDLE');
 
   const [loadedTurns, setLoadedTurns] = useState(0);
   const [totalTurns, setTotalTurns] = useState<number | null>(null);
@@ -117,6 +119,7 @@ export function useConversation(conversationId: string) {
     setTotalTurns(null);
     setHasMoreHistory(true);
     setHistoryLoading(false);
+    prevStatusRef.current = 'IDLE';
 
     send({
       type: 'chat:unsubscribe',
@@ -138,10 +141,16 @@ export function useConversation(conversationId: string) {
     if (lastMessage.conversationId !== conversationIdRef.current) return;
 
     if (lastMessage.type === 'session:status') {
-      dispatch({ type: 'status', status: lastMessage.payload.state });
+      const nextState = lastMessage.payload.state;
+      if (prevStatusRef.current === 'RUNNING' && nextState === 'IDLE') {
+        soundManager.playTaskComplete();
+      }
+      prevStatusRef.current = nextState;
+      dispatch({ type: 'status', status: nextState });
     } else if (lastMessage.type === 'chat:stream') {
       dispatch({ type: 'event', event: lastMessage.payload });
     } else if (lastMessage.type === 'chat:interactive_prompt') {
+      soundManager.playAttentionRequired();
       dispatch({ type: 'interactive_prompt', active: true });
     }
   }, [lastMessage]);

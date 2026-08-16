@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { soundManager } from '@/lib/sound';
 
 export type SessionState = 'IDLE' | 'RUNNING' | 'WAITING_INPUT';
 
@@ -18,6 +19,7 @@ function wsUrl(): string {
 
 export function SessionStatusProvider({ children }: { children: React.ReactNode }) {
   const [statuses, setStatuses] = useState<Record<string, SessionState>>({});
+  const prevStatusesRef = useRef<Record<string, SessionState>>({});
   const { lastMessage, send } = useWebSocket(wsUrl());
 
   // Fetch initial active statuses from REST API
@@ -27,6 +29,7 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
       .then((data) => {
         if (data && data.statuses) {
           setStatuses((prev) => ({ ...prev, ...data.statuses }));
+          prevStatusesRef.current = { ...prevStatusesRef.current, ...data.statuses };
         }
       })
       .catch(() => {});
@@ -38,9 +41,19 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
 
     if (lastMessage.type === 'session:all_statuses' && lastMessage.payload?.statuses) {
       setStatuses((prev) => ({ ...prev, ...lastMessage.payload.statuses }));
+      prevStatusesRef.current = { ...prevStatusesRef.current, ...lastMessage.payload.statuses };
     } else if (lastMessage.type === 'session:status_update' && lastMessage.conversationId) {
       const convId = lastMessage.conversationId;
       const st = lastMessage.payload?.status as SessionState;
+      const prevSt = prevStatusesRef.current[convId];
+
+      if (st === 'WAITING_INPUT' && prevSt !== 'WAITING_INPUT') {
+        soundManager.playAttentionRequired();
+      } else if (st === 'IDLE' && prevSt === 'RUNNING') {
+        soundManager.playTaskComplete();
+      }
+      prevStatusesRef.current[convId] = st;
+
       setStatuses((prev) => {
         if (st === 'IDLE') {
           const next = { ...prev };
@@ -52,6 +65,15 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
     } else if (lastMessage.type === 'session:status' && lastMessage.conversationId) {
       const convId = lastMessage.conversationId;
       const st = lastMessage.payload?.state as SessionState;
+      const prevSt = prevStatusesRef.current[convId];
+
+      if (st === 'WAITING_INPUT' && prevSt !== 'WAITING_INPUT') {
+        soundManager.playAttentionRequired();
+      } else if (st === 'IDLE' && prevSt === 'RUNNING') {
+        soundManager.playTaskComplete();
+      }
+      prevStatusesRef.current[convId] = st;
+
       setStatuses((prev) => {
         if (st === 'IDLE') {
           const next = { ...prev };
@@ -62,7 +84,9 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
       });
     } else if (lastMessage.type === 'chat:interactive_prompt' && lastMessage.conversationId) {
       const convId = lastMessage.conversationId;
+      soundManager.playAttentionRequired();
       setStatuses((prev) => ({ ...prev, [convId]: 'WAITING_INPUT' }));
+      prevStatusesRef.current[convId] = 'WAITING_INPUT';
     }
   }, [lastMessage]);
 
