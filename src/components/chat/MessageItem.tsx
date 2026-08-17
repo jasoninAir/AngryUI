@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ThoughtAccordion } from './ThoughtAccordion';
 import { ToolCard } from './ToolCard';
+import { MarkdownContent } from './MarkdownContent';
 import { FileText, FileCode, FileSpreadsheet, ExternalLink, ZoomIn } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -88,41 +89,7 @@ function parseUserAttachments(rawText: string = ''): { attachments: ParsedAttach
   };
 }
 
-// Parse markdown images inside assistant messages
-function renderAssistantContent(
-  text: string = '',
-  onImageClick: (url: string) => void
-) {
-  const safeText = text || '';
-  // Regex to split on markdown images ![alt](url)
-  const parts = safeText.split(/(!\[.*?\]\(.*?\))/g);
 
-  return parts.map((part, idx) => {
-    const match = part.match(/^!\[(.*?)\]\((.*?)\)$/);
-    if (match) {
-      const alt = match[1] || 'Generated image';
-      const rawUrl = match[2];
-      const media = resolveMediaUrl(rawUrl);
-
-      return (
-        <div key={idx} className="my-2 group relative inline-block max-w-md">
-          <img
-            src={media.url}
-            alt={alt}
-            onClick={() => onImageClick(media.url)}
-            className="rounded-xl border border-border/80 max-h-72 max-w-full object-contain cursor-zoom-in hover:opacity-95 transition-opacity shadow-sm bg-muted/40"
-          />
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1 px-1">
-            <ZoomIn className="w-3 h-3 shrink-0" />
-            <span className="truncate">{alt}</span>
-          </div>
-        </div>
-      );
-    }
-
-    return <span key={idx}>{part}</span>;
-  });
-}
 
 export function MessageItem({ msg }: { msg: Message }) {
   const { t } = useLanguage();
@@ -217,9 +184,10 @@ export function MessageItem({ msg }: { msg: Message }) {
     <div className="flex justify-start my-1.5">
       <div className="max-w-[85%] rounded-2xl p-3.5 bg-secondary text-secondary-foreground shadow-2xs text-sm">
         {msg.thought && <ThoughtAccordion thought={msg.thought} />}
-        <div className="whitespace-pre-wrap leading-relaxed">
-          {renderAssistantContent(msg.text || '', (url) => setSelectedImage(url))}
-        </div>
+        <MarkdownContent
+          content={msg.text || ''}
+          onImageClick={(url) => setSelectedImage(url)}
+        />
       </div>
 
       {/* Lightbox Modal for Assistant Images */}

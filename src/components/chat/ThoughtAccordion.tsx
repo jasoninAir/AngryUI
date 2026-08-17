@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { Sparkles, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
 
 export function ThoughtAccordion({ thought }: { thought?: any }) {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   if (!thought) return null;
 
@@ -16,20 +18,60 @@ export function ThoughtAccordion({ thought }: { thought?: any }) {
           }
         })();
 
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(formattedThought);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
   return (
-    <div className="border border-border/80 rounded-lg p-2 my-1 text-xs bg-background/50 mb-2">
+    <div className="border border-border/70 rounded-xl p-2.5 my-1.5 text-xs bg-muted/30 mb-2.5 transition-all">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-[11px] font-medium cursor-pointer select-none"
+        className="flex items-center justify-between w-full text-muted-foreground hover:text-foreground text-[11px] font-medium cursor-pointer select-none"
       >
-        <span className="text-[10px] text-muted-foreground font-bold">{open ? '▼' : '▶'}</span>
-        <span>Thinking Process</span>
+        <div className="flex items-center gap-1.5">
+          {open ? <ChevronDown className="w-3.5 h-3.5 text-primary" /> : <ChevronRight className="w-3.5 h-3.5 text-primary" />}
+          <Sparkles className="w-3.5 h-3.5 text-amber-500/80" />
+          <span className="font-semibold text-foreground/80">Thinking Process</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {open && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground bg-background/80 hover:bg-background px-1.5 py-0.5 rounded transition-colors cursor-pointer border border-border/50"
+              title="Copy thinking process"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-2.5 h-2.5 text-emerald-500" />
+                  <span className="text-emerald-500">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-2.5 h-2.5" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          )}
+          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted rounded">
+            {open ? 'Hide' : 'Show'}
+          </span>
+        </div>
       </button>
+
       {open && (
-        <pre className="mt-2 whitespace-pre-wrap text-[11px] text-muted-foreground leading-relaxed border-t border-border/60 pt-2 font-mono break-all max-h-60 overflow-y-auto">
-          {formattedThought}
-        </pre>
+        <div className="mt-2 border-t border-border/60 pt-2">
+          <pre className="whitespace-pre-wrap text-[11px] text-muted-foreground leading-relaxed font-mono break-words max-h-72 overflow-y-auto p-1 selection:bg-primary/20">
+            {formattedThought}
+          </pre>
+        </div>
       )}
     </div>
   );
