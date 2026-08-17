@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ThoughtAccordion } from './ThoughtAccordion';
 import { ToolCard } from './ToolCard';
 import { MarkdownContent } from './MarkdownContent';
-import { FileText, FileCode, FileSpreadsheet, ExternalLink, ZoomIn } from 'lucide-react';
+import { FileText, FileCode, FileSpreadsheet, ExternalLink, ZoomIn, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 type Message =
@@ -91,12 +91,72 @@ function parseUserAttachments(rawText: string = ''): { attachments: ParsedAttach
 
 
 
+interface AuthMessageInfo {
+  isAuth: boolean;
+  type: 'once' | 'whitelist';
+  command?: string;
+}
+
+export function parseAuthorizationMessage(text: string = ''): AuthMessageInfo | null {
+  const clean = text.trim();
+  if (!clean) return null;
+
+  // 1. Allow once
+  if (
+    clean.includes('允许执行本次命令') ||
+    clean.includes('允许执行当前命令') ||
+    clean.includes('允许本次授权') ||
+    clean.includes('Authorization granted') ||
+    clean.includes('Authorization Granted') ||
+    clean.includes('Permission Granted') ||
+    clean.includes('今回のコマンド実行を許可') ||
+    clean.includes('Ejecución permitida')
+  ) {
+    return { isAuth: true, type: 'once' };
+  }
+
+  // 2. Add to whitelist
+  const whitelistMatch =
+    clean.match(/已将命令\s*(.*?)\s*加入白名单/) ||
+    clean.match(/added command\s*(.*?)\s*to (?:permission )?whitelist/i) ||
+    clean.match(/コマンド\s*(.*?)\s*を(?:許可ルール|ホワイトリスト)に追加/i) ||
+    clean.match(/Comando\s*(.*?)\s*añadido a las reglas/i);
+
+  if (whitelistMatch || clean.includes('加入白名单') || clean.includes('whitelist') || clean.includes('ホワイトリスト')) {
+    const cmd = whitelistMatch ? whitelistMatch[1]?.trim() : undefined;
+    return { isAuth: true, type: 'whitelist', command: cmd };
+  }
+
+  return null;
+}
+
 export function MessageItem({ msg }: { msg: Message }) {
   const { t } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (msg.role === 'user') {
     const rawText = msg.text || '';
+    const authInfo = parseAuthorizationMessage(rawText);
+
+    // Render authorization confirmations as a centered capsule badge
+    if (authInfo) {
+      const label =
+        authInfo.type === 'whitelist'
+          ? authInfo.command
+            ? `${t('authAddedToWhitelist')}: ${authInfo.command}`
+            : t('authAddedToWhitelist')
+          : t('authGrantedOnce');
+
+      return (
+        <div className="flex justify-center items-center my-3 w-full animate-in fade-in zoom-in-95 duration-200 select-none">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium shadow-2xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="truncate max-w-md font-sans">{label}</span>
+          </div>
+        </div>
+      );
+    }
+
     const { attachments, cleanText } = parseUserAttachments(rawText);
 
     return (

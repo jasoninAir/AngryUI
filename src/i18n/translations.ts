@@ -83,6 +83,8 @@ export const translations = {
     permissionRequiredDesc: 'The agent requested to run an unapproved command:',
     allowOnce: 'Allow Once & Continue',
     addToWhitelist: 'Add to Whitelist & Continue',
+    authGrantedOnce: 'Authorization granted for this execution',
+    authAddedToWhitelist: 'Added command to permission whitelist',
     takeoverTTY: 'WebTTY Takeover',
     ignore: 'Ignore',
 
@@ -201,6 +203,8 @@ export const translations = {
     permissionRequiredDesc: '智能体申请执行未在白名单中的命令：',
     allowOnce: '✅ 允许本次并继续',
     addToWhitelist: '➕ 加入白名单并继续',
+    authGrantedOnce: '授权确认：已允许本次命令执行',
+    authAddedToWhitelist: '权限白名单：已将命令加入放行规则',
     takeoverTTY: '💻 WebTTY 接管',
     ignore: '❌ 忽略',
 
@@ -319,6 +323,8 @@ export const translations = {
     permissionRequiredDesc: '智能體申請執行未在白名單中的指令：',
     allowOnce: '✅ 允許本次並繼續',
     addToWhitelist: '➕ 加入白名單並繼續',
+    authGrantedOnce: '授權確認：已允許本次命令執行',
+    authAddedToWhitelist: '權限白名單：已將命令加入放行規則',
     takeoverTTY: '💻 WebTTY 接管',
     ignore: '❌ 忽略',
 
@@ -437,6 +443,8 @@ export const translations = {
     permissionRequiredDesc: 'エージェントがホワイトリスト外のコマンド実行をリクエストしました:',
     allowOnce: '✅ 今回のみ許可して続行',
     addToWhitelist: '➕ ホワイトリストに追加して続行',
+    authGrantedOnce: '承認確認：今回のコマンド実行を許可しました',
+    authAddedToWhitelist: 'ホワイトリスト：コマンドを許可ルールに追加しました',
     takeoverTTY: '💻 WebTTY で引き継ぐ',
     ignore: '❌ 無視',
 
@@ -555,6 +563,8 @@ export const translations = {
     permissionRequiredDesc: 'El agente solicitó ejecutar un comando no autorizado:',
     allowOnce: '✅ Permitir Esta Vez y Continuar',
     addToWhitelist: '➕ Añadir a Lista Blanca y Continuar',
+    authGrantedOnce: 'Autorización confirmada: Ejecución permitida',
+    authAddedToWhitelist: 'Lista blanca: Comando añadido a las reglas',
     takeoverTTY: '💻 Tomar Control con WebTTY',
     ignore: '❌ Ignorar',
 
