@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Sparkles, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
+import { sanitizeOutputText } from '@/lib/textSanitizer';
 
 export function ThoughtAccordion({ thought }: { thought?: any }) {
   const [open, setOpen] = useState(false);
@@ -7,7 +8,7 @@ export function ThoughtAccordion({ thought }: { thought?: any }) {
 
   if (!thought) return null;
 
-  const formattedThought =
+  const rawThought =
     typeof thought === 'string'
       ? thought
       : (() => {
@@ -17,6 +18,8 @@ export function ThoughtAccordion({ thought }: { thought?: any }) {
             return String(thought);
           }
         })();
+
+  const formattedThought = sanitizeOutputText(rawThought);
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();

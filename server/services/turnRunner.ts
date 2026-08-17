@@ -73,7 +73,15 @@ export class TurnRunner {
     const child: ChildProcessWithoutNullStreams = spawn(getConfig().agyBin, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: runCwd,
-      env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', PYTHONIOENCODING: 'utf-8' }
+      env: {
+        ...process.env,
+        LANG: 'en_US.UTF-8',
+        LC_ALL: 'en_US.UTF-8',
+        PYTHONIOENCODING: 'utf-8',
+        NO_COLOR: '1',
+        FORCE_COLOR: '0',
+        TERM: 'dumb'
+      }
     });
 
     const queue: AgyEvent[] = [];
@@ -196,13 +204,26 @@ export class TurnRunner {
   async quota(): Promise<string> {
     return new Promise((resolve, reject) => {
       const child = spawn(getConfig().agyBin, ['--print', '/quota', '--output-format', 'stream-json'], {
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          LANG: 'en_US.UTF-8',
+          LC_ALL: 'en_US.UTF-8',
+          PYTHONIOENCODING: 'utf-8',
+          NO_COLOR: '1',
+          FORCE_COLOR: '0',
+          TERM: 'dumb'
+        }
       });
       let output = '';
+      const decoder = new StringDecoder('utf-8');
       child.stdout.on('data', (c: Buffer) => {
-        output += c.toString();
+        output += decoder.write(c);
       });
-      child.on('close', () => resolve(output));
+      child.on('close', () => {
+        output += decoder.end();
+        resolve(output);
+      });
       child.on('error', reject);
     });
   }

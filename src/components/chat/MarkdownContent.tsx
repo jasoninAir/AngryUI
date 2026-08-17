@@ -14,6 +14,7 @@ import {
   Code2
 } from 'lucide-react';
 import { resolveMediaUrl } from './MessageItem';
+import { sanitizeOutputText } from '@/lib/textSanitizer';
 
 interface MarkdownContentProps {
   content: string;
@@ -92,7 +93,7 @@ function formatLanguage(lang: string = ''): string {
 }
 
 export function MarkdownContent({ content, onImageClick, className = '' }: MarkdownContentProps) {
-  const safeContent = content || '';
+  const safeContent = useMemo(() => sanitizeOutputText(content || ''), [content]);
 
   const components = useMemo(
     () => ({

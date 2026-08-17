@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getConfig } from '../config';
+import { sanitizeOutputText } from '../utils/textSanitizer';
 
 export interface ChatMessage {
   id: string;
@@ -68,7 +69,7 @@ export function getConversationHistory(
         turns.push(currentTurn);
         currentTurn = [];
       }
-      const userText = cleanUserContent(entry.content || '');
+      const userText = sanitizeOutputText(cleanUserContent(entry.content || ''));
       currentTurn.push({
         id: `turn-${turns.length}-user-${entry.step_index}`,
         role: 'user',
@@ -83,8 +84,8 @@ export function getConversationHistory(
         currentTurn.push({
           id: `turn-${turns.length}-assistant-${entry.step_index}`,
           role: 'assistant',
-          text: entry.content,
-          thought: entry.thought,
+          text: sanitizeOutputText(entry.content),
+          thought: entry.thought ? sanitizeOutputText(entry.thought) : undefined,
           timestamp: entry.created_at
         });
       }
@@ -99,7 +100,7 @@ export function getConversationHistory(
           role: 'tool',
           name: (entry.type || '').toLowerCase(),
           input: {},
-          output: typeof entry.content === 'string' ? entry.content.slice(0, 300) : '',
+          output: typeof entry.content === 'string' ? sanitizeOutputText(entry.content.slice(0, 300)) : '',
           timestamp: entry.created_at
         });
       }

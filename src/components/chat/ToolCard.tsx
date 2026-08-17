@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Copy, Check, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
+import { sanitizeOutputText } from '@/lib/textSanitizer';
 
 function CopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -48,8 +49,8 @@ export function ToolCard({ name, input, output }: { name?: string; input?: any; 
   };
 
   const displayName = name || 'tool_call';
-  const formattedInput = formatContent(input);
-  const formattedOutput = formatContent(output);
+  const formattedInput = sanitizeOutputText(formatContent(input));
+  const formattedOutput = sanitizeOutputText(formatContent(output));
 
   return (
     <div className="border border-border/80 rounded-xl p-2.5 my-1.5 text-xs bg-card/60 shadow-2xs font-mono transition-all">
