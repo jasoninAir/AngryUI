@@ -20,7 +20,7 @@ export function checkToken(req: IncomingMessage, expected: string | null): boole
 export function requireAuth(expected: string | null) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!checkToken(req, expected)) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized', code: 'UNAUTHORIZED', requestId: (req as any).requestId });
       return;
     }
     next();

@@ -1,11 +1,29 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { SessionStatusProvider } from './context/SessionStatusContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { ChatPage } from './pages/ChatPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PanelLeftOpen } from 'lucide-react';
+
+function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
+  const [val, setVal] = useState('');
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <form onSubmit={e => { e.preventDefault(); onLogin(val); }} className="flex flex-col gap-3">
+        <h1 className="text-xl font-bold">AngryUI</h1>
+        <input type="password" value={val} onChange={e => setVal(e.target.value)}
+          placeholder="Enter access token" className="border rounded px-3 py-2" autoFocus />
+        <button type="submit" className="bg-primary text-primary-foreground rounded px-4 py-2">
+          Connect
+        </button>
+      </form>
+    </div>
+  );
+}
 
 function HomePage() {
   const { toggleSidebar } = useSidebar();
@@ -33,23 +51,37 @@ function HomePage() {
   );
 }
 
+function AppContent() {
+  const { isAuthenticated, login } = useAuth();
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={login} />;
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+        <Sidebar />
+        <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/chat/:conversationId" element={<ChatPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </main>
+      </div>
+    </SidebarProvider>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <LanguageProvider>
         <SessionStatusProvider>
-          <SidebarProvider>
-            <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-              <Sidebar />
-              <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/chat/:conversationId" element={<ChatPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                </Routes>
-              </main>
-            </div>
-          </SidebarProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
         </SessionStatusProvider>
       </LanguageProvider>
     </BrowserRouter>

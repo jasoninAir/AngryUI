@@ -12,6 +12,7 @@ import {
 import { Send, Square, Paperclip, X, FileText, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { generateUUID } from '@/lib/uuid';
+import { getStoredToken } from '@/lib/auth';
 
 export interface ChatInputHandle {
   insertSnippet: (snippet: string) => void;
@@ -219,9 +220,12 @@ export const ChatInput = forwardRef<
           }))
         );
 
+        const token = getStoredToken();
+        const hdrs: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) hdrs['Authorization'] = `Bearer ${token}`;
         const res = await fetch('/api/upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: hdrs,
           body: JSON.stringify({
             conversationId: conversationId || 'default',
             files: payloadFiles

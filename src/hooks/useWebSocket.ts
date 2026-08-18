@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { WSMessage } from '@/lib/types';
+import { getStoredToken } from '@/lib/auth';
 
 export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -12,7 +13,11 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback(() => {
-    const ws = new WebSocket(url);
+    const token = getStoredToken();
+    const wsUrl = token
+      ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
+      : url;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     setReadyState(WebSocket.CONNECTING);
 
