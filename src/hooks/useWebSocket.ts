@@ -2,6 +2,15 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type { WSMessage } from '@/lib/types';
 import { getStoredToken } from '@/lib/auth';
 
+const INITIAL_DELAY_MS = 1000;
+const MAX_DELAY_MS = 30000;
+const JITTER_MS = 500;
+
+export function getBackoffDelay(attempt: number): number {
+  const exp = Math.min(INITIAL_DELAY_MS * Math.pow(2, attempt), MAX_DELAY_MS);
+  return Math.round(exp + Math.random() * JITTER_MS);
+}
+
 export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) {
   const wsRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef(onMessage);
@@ -10,7 +19,9 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
 
   const [readyState, setReadyState] = useState<WebSocket['readyState']>(WebSocket.CONNECTING);
   const [lastMessage, setLastMessage] = useState<WSMessage | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptRef = useRef(0);
 
   const connect = useCallback(() => {
     const token = getStoredToken();
@@ -22,6 +33,8 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
     setReadyState(WebSocket.CONNECTING);
 
     ws.onopen = () => {
+      reconnectAttemptRef.current = 0;
+      setRetryCount(0);
       setReadyState(WebSocket.OPEN);
       // Flush queued messages sent while socket was connecting
       while (queueRef.current.length > 0) {
@@ -34,7 +47,10 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
 
     ws.onclose = () => {
       setReadyState(WebSocket.CLOSED);
-      reconnectTimeoutRef.current = setTimeout(connect, 2000);
+      const delay = getBackoffDelay(reconnectAttemptRef.current);
+      reconnectAttemptRef.current += 1;
+      reconnectTimeoutRef.current = setTimeout(connect, delay);
+      setRetryCount(reconnectAttemptRef.current);
     };
 
     ws.onerror = () => ws.close();
@@ -68,5 +84,5 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
     }
   }, []);
 
-  return { send, lastMessage, readyState };
+  return { send, lastMessage, readyState, retryCount };
 }

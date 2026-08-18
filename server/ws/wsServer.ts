@@ -34,6 +34,22 @@ export function attachWsServer(
       handleTuiConnection(ws, conversationId);
       return;
     }
+
+    // Ping/pong heartbeat: ping every 25s, disconnect if no pong within 60s
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
+    }, 25000);
+
+    ws.on('pong', () => {
+      // Client is alive
+    });
+
+    ws.on('close', () => {
+      clearInterval(pingInterval);
+    });
+
     handleChatConnection(ws, index);
   });
 
