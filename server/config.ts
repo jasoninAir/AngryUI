@@ -6,6 +6,7 @@ export interface Config {
   port: number;
   host: string;
   token: string | null;
+  corsOrigins: string[];
   agyHome: string;
   webuiHome: string;
   agyBin: string;
@@ -38,10 +39,11 @@ export function parseCliArgs(argv = process.argv.slice(2)): {
   port?: number;
   host?: string;
   token?: string;
+  corsOrigins?: string;
   allowSkipPermissions?: boolean;
   help?: boolean;
 } {
-  const result: { port?: number; host?: string; token?: string; allowSkipPermissions?: boolean; help?: boolean } = {};
+  const result: { port?: number; host?: string; token?: string; corsOrigins?: string; allowSkipPermissions?: boolean; help?: boolean } = {};
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -64,6 +66,11 @@ export function parseCliArgs(argv = process.argv.slice(2)): {
       if (val) result.token = val;
     } else if (arg.startsWith('--token=')) {
       result.token = arg.split('=')[1];
+    } else if (arg === '--cors-origins') {
+      const val = argv[++i];
+      if (val) result.corsOrigins = val;
+    } else if (arg.startsWith('--cors-origins=')) {
+      result.corsOrigins = arg.split('=')[1];
     } else if (arg === '--allow-skip-permissions') {
       result.allowSkipPermissions = true;
     } else if (arg.startsWith('--allow-skip-permissions=')) {
@@ -90,6 +97,7 @@ Options:
   -p, --port <port>           Port to listen on (default: 5173, env: AGY_WEBUI_PORT, PORT)
       --host <host>           Host to bind (default: 0.0.0.0, env: AGY_WEBUI_HOST)
   -t, --token <token>         Optional access token for API protection (env: AGY_WEBUI_TOKEN)
+      --cors-origins <origins>  Comma-separated CORS whitelist (env: AGY_WEBUI_CORS_ORIGINS)
       --allow-skip-permissions  Allow skipping permission prompts (default: false, env: AGY_WEBUI_ALLOW_SKIP_PERMISSIONS)
       --help                  Show this help message
 
@@ -97,6 +105,7 @@ Examples:
   npm start -- --port 8080
   npm start -- -p 8888 --host 127.0.0.1
   node dist-server/server/index.js --port 9000
+  npm start -- --cors-origins "http://localhost:3000,https://example.com"
     `);
     process.exit(0);
   }
@@ -122,10 +131,16 @@ Examples:
     process.env.AGY_WEBUI_ALLOW_SKIP_PERMISSIONS === 'true' ??
     false;
 
+  const corsOrigins =
+    cli.corsOrigins ??
+    process.env.AGY_WEBUI_CORS_ORIGINS ??
+    '';
+
   return {
     port,
     host,
     token,
+    corsOrigins: corsOrigins.split(',').filter(Boolean),
     allowSkipPermissions,
     agyHome: path.join(os.homedir(), '.gemini', 'antigravity-cli'),
     webuiHome: path.join(os.homedir(), '.agy-webui'),
