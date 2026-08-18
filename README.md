@@ -20,7 +20,7 @@
 [![i18n](https://img.shields.io/badge/i18n-5%20Languages-orange.svg)]()
 [![Node](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 
-[Why AngryUI](#-why-angryui) • [Key Features](#-key-features) • [Quick Start](#-quick-start) • [Production Deployment](#-production-deployment) • [Remote & VPN Access](#-remote--vpn-access) • [Configuration](#-configuration) • [Architecture](#-architecture) • [Testing](#-testing) • [Troubleshooting](#-troubleshooting)
+[Why AngryUI](#-why-angryui) • [Key Features](#-key-features) • [Quick Start](#-quick-start) • [Production Deployment](#-production-deployment) • [Remote & VPN Access](#-remote--vpn-access) • [PWA App](#-pwa-mobile-app-recommended) • [Configuration](#-configuration) • [Architecture](#-architecture) • [Testing](#-testing) • [Troubleshooting](#-troubleshooting)
 
 </div>
 
@@ -170,6 +170,25 @@ AngryUI is designed to be accessed from any phone, iPad, laptop, or remote works
 1. Ensure AngryUI is running via `npm run pm2:start` (or `npm start`).
 2. On your host machine, find your LAN IP (`ifconfig` or `ipconfig`) or VPN IP.
 3. Open `http://<HOST_IP>:5173` on your remote device.
+
+---
+
+## 📱 PWA Mobile App (Recommended)
+
+For the best mobile and tablet experience, AngryUI is optimized to run as a standalone **Progressive Web App (PWA)**:
+
+- **iOS / iPadOS (Safari)**:
+  1. Open `http://<HOST_IP>:5173` in Safari.
+  2. Tap the **Share** icon (square with arrow up).
+  3. Scroll and select **"Add to Home Screen"** (添加到主屏幕).
+  4. Launch AngryUI directly from your home screen for an immersive, full-screen, address-bar-free experience.
+
+- **Android (Chrome / Edge)**:
+  1. Open `http://<HOST_IP>:5173` in Chrome.
+  2. Tap the **Three Dots Menu (⋮)** in the top right.
+  3. Select **"Install App"** or **"Add to Home Screen"**.
+
+> **Pro Tip**: Running AngryUI as an installed PWA gives you native fullscreen, fast local shell caching, and seamless touchscreen terminal interactions.
 
 ---
 
