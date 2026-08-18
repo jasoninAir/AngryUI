@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { soundManager } from '@/lib/sound';
+import { authFetch } from '@/lib/api';
 
 export type SessionState = 'IDLE' | 'RUNNING' | 'WAITING_INPUT' | 'PAUSED';
 
@@ -24,7 +25,7 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
 
   // Fetch initial active statuses from REST API
   useEffect(() => {
-    fetch('/api/sessions/status')
+    authFetch('/api/sessions/status')
       .then((res) => (res.ok ? res.json() : { statuses: {} }))
       .then((data) => {
         if (data && data.statuses) {

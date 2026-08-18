@@ -5,6 +5,7 @@ import { useSidebar } from '@/context/SidebarContext';
 import { useSessionStatus } from '@/context/SessionStatusContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { SUPPORTED_MODELS, getModelConfig, EffortLevel } from '@/lib/models';
+import { authFetch } from '@/lib/api';
 import { MessageList } from './MessageList';
 import { ChatInput, ChatInputHandle } from './ChatInput';
 import { FileExplorerDrawer } from './FileExplorerDrawer';
@@ -112,7 +113,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   // Auto-fill workspace from database if not specified in searchParams
   useEffect(() => {
     if (!workspace) {
-      fetch('/api/projects')
+      authFetch('/api/projects')
         .then((res) => res.json())
         .then((data) => {
           if (data && data.groups) {
@@ -146,7 +147,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     }
     const cmdRule = `command(${permissionPrompt.command})`;
     try {
-      await fetch('/api/settings/permissions', {
+      await authFetch('/api/settings/permissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pattern: cmdRule })

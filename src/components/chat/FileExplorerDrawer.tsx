@@ -19,6 +19,7 @@ import {
   FolderTree
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { authFetch } from '@/lib/api';
 
 export interface WorkspaceFileEntry {
   name: string;
@@ -94,7 +95,7 @@ function TreeNode({
     if (!entry.isDirectory) return;
     setLoading(true);
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `/api/workspace/files?workspace=${encodeURIComponent(workspace)}&subDir=${encodeURIComponent(
           entry.relativePath
         )}`
@@ -306,7 +307,7 @@ export function FileExplorerDrawer({
     if (!cleanWorkspace) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/workspace/files?workspace=${encodeURIComponent(cleanWorkspace)}`);
+      const res = await authFetch(`/api/workspace/files?workspace=${encodeURIComponent(cleanWorkspace)}`);
       if (res.ok) {
         const data = await res.json();
         setEntries(data.entries || []);
