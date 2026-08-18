@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FolderPlus, X, Folder, ArrowRight } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { generateUUID } from '@/lib/uuid';
 
 interface NewSessionModalProps {
   existingWorkspaces: string[];
@@ -32,7 +33,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
       return;
     }
 
-    const conversationId = crypto.randomUUID();
+    const conversationId = generateUUID();
     const targetUrl = `/chat/${conversationId}?workspace=${encodeURIComponent(cleanPath)}`;
     onClose();
     if (isMobile) closeSidebar();

@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, unlinkSync, rmSync } from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { getConfig } from '../config';
 
 interface ArchiveMetaFile {
@@ -33,7 +34,7 @@ export function writeArchivedIds(ids: Set<string>): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  const tmpPath = `${filePath}.${crypto.randomUUID()}.tmp`;
+  const tmpPath = `${filePath}.${randomUUID()}.tmp`;
   const data: ArchiveMetaFile = {
     archivedIds: Array.from(ids)
   };
@@ -96,7 +97,7 @@ export function setCustomTitle(conversationId: string, title: string): void {
   } else {
     current.delete(conversationId);
   }
-  const tmpPath = `${filePath}.${crypto.randomUUID()}.tmp`;
+  const tmpPath = `${filePath}.${randomUUID()}.tmp`;
   const obj = Object.fromEntries(current.entries());
   try {
     writeFileSync(tmpPath, JSON.stringify(obj, null, 2), 'utf-8');

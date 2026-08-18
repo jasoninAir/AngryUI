@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
 import { fetchConversationHistory } from '@/lib/api';
 import { soundManager } from '@/lib/sound';
+import { generateUUID } from '@/lib/uuid';
 import type { AgyEventClient, WSMessage } from '@/lib/types';
 
 export type Message =
@@ -76,7 +77,7 @@ function reducer(state: State, action: Action): State {
     case 'user':
       return {
         ...state,
-        messages: [...state.messages, { id: crypto.randomUUID(), role: 'user', text: action.text }]
+        messages: [...state.messages, { id: generateUUID(), role: 'user', text: action.text }]
       };
     case 'event': {
       const ev = action.event;
@@ -85,7 +86,7 @@ function reducer(state: State, action: Action): State {
           ...state,
           messages: [
             ...state.messages,
-            { id: crypto.randomUUID(), role: 'assistant', text: `❌ 错误: ${ev.message}` }
+            { id: generateUUID(), role: 'assistant', text: `❌ 错误: ${ev.message}` }
           ]
         };
       }
@@ -101,7 +102,7 @@ function reducer(state: State, action: Action): State {
               ...state,
               messages: [
                 ...state.messages,
-                { id: crypto.randomUUID(), role: 'assistant', text: ev.text_delta }
+                { id: generateUUID(), role: 'assistant', text: ev.text_delta }
               ]
             };
           }
@@ -112,7 +113,7 @@ function reducer(state: State, action: Action): State {
             messages: [
               ...state.messages,
               {
-                id: crypto.randomUUID(),
+                id: generateUUID(),
                 role: 'tool',
                 name: ev.tool_name,
                 input: ev.tool_info?.parameters ?? {},

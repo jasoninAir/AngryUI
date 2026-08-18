@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { Send, Square, Paperclip, X, FileText, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { generateUUID } from '@/lib/uuid';
 
 export interface ChatInputHandle {
   insertSnippet: (snippet: string) => void;
@@ -128,7 +129,7 @@ export const ChatInput = forwardRef<
     const newStaged: StagedAttachment[] = Array.from(files).map((f) => {
       const isImg = f.type.startsWith('image/');
       return {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         file: f,
         name: f.name,
         size: f.size,

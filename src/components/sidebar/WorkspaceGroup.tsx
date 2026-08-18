@@ -4,6 +4,7 @@ import { Plus, MessageSquarePlus } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { ConversationItem } from './ConversationItem';
+import { generateUUID } from '@/lib/uuid';
 import type { ConversationSummary } from '@/lib/types';
 
 interface WorkspaceGroupProps {
@@ -35,7 +36,7 @@ export function WorkspaceGroup({
   const handleCreateSession = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const newId = crypto.randomUUID();
+    const newId = generateUUID();
     const cleanWorkspace = workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace;
     if (isMobile) closeSidebar();
     navigate(`/chat/${newId}?workspace=${encodeURIComponent(cleanWorkspace)}`);
