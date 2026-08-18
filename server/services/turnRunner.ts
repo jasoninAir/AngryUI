@@ -9,7 +9,6 @@ export interface TurnOptions {
   message: string;
   model?: string;
   effort?: 'low' | 'medium' | 'high';
-  dangerouslySkipPermissions?: boolean;
   cwd?: string;
 }
 
@@ -60,12 +59,12 @@ export class TurnRunner {
     }
 
     const formattedModel = formatAgyModel(opts.model, opts.effort);
-    const skipPerms = Boolean(opts.dangerouslySkipPermissions);
+    const allowSkip = getConfig().allowSkipPermissions;
     const args = [
       '--conversation', opts.conversationId,
       '--add-dir', runCwd,
       ...(formattedModel ? ['--model', formattedModel] : []),
-      ...(skipPerms ? ['--dangerously-skip-permissions'] : []),
+      ...(allowSkip ? ['--dangerously-skip-permissions'] : []),
       '--output-format', 'stream-json',
       '--print', opts.message
     ];

@@ -9,6 +9,7 @@ export interface Config {
   agyHome: string;
   webuiHome: string;
   agyBin: string;
+  allowSkipPermissions: boolean;
 }
 
 function resolveAgyBin(): string {
@@ -37,9 +38,10 @@ export function parseCliArgs(argv = process.argv.slice(2)): {
   port?: number;
   host?: string;
   token?: string;
+  allowSkipPermissions?: boolean;
   help?: boolean;
 } {
-  const result: { port?: number; host?: string; token?: string; help?: boolean } = {};
+  const result: { port?: number; host?: string; token?: string; allowSkipPermissions?: boolean; help?: boolean } = {};
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -62,6 +64,11 @@ export function parseCliArgs(argv = process.argv.slice(2)): {
       if (val) result.token = val;
     } else if (arg.startsWith('--token=')) {
       result.token = arg.split('=')[1];
+    } else if (arg === '--allow-skip-permissions') {
+      result.allowSkipPermissions = true;
+    } else if (arg.startsWith('--allow-skip-permissions=')) {
+      const val = arg.split('=')[1];
+      result.allowSkipPermissions = val === 'true';
     }
   }
 
@@ -80,10 +87,11 @@ Usage:
   node dist-server/server/index.js [options]
 
 Options:
-  -p, --port <port>       Port to listen on (default: 5173, env: AGY_WEBUI_PORT, PORT)
-      --host <host>       Host to bind (default: 0.0.0.0, env: AGY_WEBUI_HOST)
-  -t, --token <token>     Optional access token for API protection (env: AGY_WEBUI_TOKEN)
-      --help              Show this help message
+  -p, --port <port>           Port to listen on (default: 5173, env: AGY_WEBUI_PORT, PORT)
+      --host <host>           Host to bind (default: 0.0.0.0, env: AGY_WEBUI_HOST)
+  -t, --token <token>         Optional access token for API protection (env: AGY_WEBUI_TOKEN)
+      --allow-skip-permissions  Allow skipping permission prompts (default: false, env: AGY_WEBUI_ALLOW_SKIP_PERMISSIONS)
+      --help                  Show this help message
 
 Examples:
   npm start -- --port 8080
@@ -109,10 +117,16 @@ Examples:
     process.env.AGY_WEBUI_TOKEN ??
     null;
 
+  const allowSkipPermissions =
+    cli.allowSkipPermissions ??
+    process.env.AGY_WEBUI_ALLOW_SKIP_PERMISSIONS === 'true' ??
+    false;
+
   return {
     port,
     host,
     token,
+    allowSkipPermissions,
     agyHome: path.join(os.homedir(), '.gemini', 'antigravity-cli'),
     webuiHome: path.join(os.homedir(), '.agy-webui'),
     agyBin: resolveAgyBin()

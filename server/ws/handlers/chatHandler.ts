@@ -90,7 +90,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
 
     if (msg.type === 'chat:send' && msg.conversationId && msg.payload) {
       const convId = msg.conversationId;
-      const { message, model, effort, dangerouslySkipPermissions, workspace } = msg.payload;
+      const { message, model, effort, workspace } = msg.payload;
 
       subscribeConversation(convId);
 
@@ -99,7 +99,6 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
         message,
         model,
         effort,
-        dangerouslySkipPermissions,
         cwd: workspace
       });
 
