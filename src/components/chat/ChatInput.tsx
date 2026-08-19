@@ -258,7 +258,7 @@ export const ChatInput = forwardRef<
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`border-t border-border bg-card/60 p-3 flex flex-col gap-2 transition-colors ${
+      className={`border-t border-border bg-card/90 backdrop-blur-sm p-2 sm:p-3 flex flex-col gap-1.5 sm:gap-2 transition-colors shrink-0 z-20 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${
         isDragging ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/40' : ''
       }`}
     >
@@ -325,18 +325,18 @@ export const ChatInput = forwardRef<
       )}
 
       {/* Main Input Row */}
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-1.5 sm:gap-2 w-full">
         {/* Attachment Button with Dropdown */}
         <div className="relative shrink-0">
           <button
             type="button"
             onClick={() => setShowAttachmentMenu((v) => !v)}
             title={t('uploadAttachmentTooltip')}
-            className={`flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer ${
-              isMobile ? 'h-9 w-8' : 'h-11 w-10'
+            className={`flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer shrink-0 ${
+              isMobile ? 'h-9 w-9' : 'h-11 w-10'
             }`}
           >
-            <Paperclip className={isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+            <Paperclip className={isMobile ? 'w-4 h-4' : 'w-4 h-4'} />
           </button>
 
           {showAttachmentMenu && (
@@ -378,9 +378,7 @@ export const ChatInput = forwardRef<
           rows={1}
           aria-label="Chat message input"
           aria-live="polite"
-          className={`flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 max-h-[40vh] leading-relaxed transition-[height] duration-75 ${
-            isMobile ? 'min-h-[36px]' : 'min-h-[44px]'
-          }`}
+          className="flex-1 min-w-0 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 min-h-[36px] max-h-[35vh] leading-relaxed transition-[height] duration-75"
         />
 
         {/* Send / Stop / Uploading Button */}

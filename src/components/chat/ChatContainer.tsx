@@ -165,14 +165,14 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-foreground overflow-hidden">
       {/* Top Header Controls */}
-      <div className="border-b border-border p-3 flex flex-wrap items-center justify-between gap-2 shrink-0 bg-card/40 select-none">
+      <div className="border-b border-border px-2 sm:px-3 py-1.5 sm:py-2.5 flex items-center justify-between gap-1.5 sm:gap-2 shrink-0 bg-card/40 select-none overflow-x-auto no-scrollbar">
         {/* Left Cluster: Sidebar Toggle, Workspace Badge, Model & Effort Selectors */}
-        <div className="flex items-center gap-2 overflow-hidden flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-hidden shrink-0">
           {(!isOpen || isMobile) && (
             <button
               onClick={toggleSidebar}
               title="Toggle Sidebar"
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
             >
               <PanelLeftOpen className="w-4 h-4" />
             </button>
@@ -181,7 +181,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           {cleanWorkspaceDisplay && (
             <div
               title={`Workspace: ${cleanWorkspaceDisplay}`}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 border border-border px-2 py-1 rounded-md max-w-[140px] sm:max-w-[200px] truncate shrink-0"
+              className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 border border-border px-2 py-1 rounded-md max-w-[140px] sm:max-w-[200px] truncate shrink-0"
             >
               <Folder className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
               <span className="truncate">{cleanWorkspaceDisplay.split('/').filter(Boolean).slice(-2).join('/')}</span>
@@ -190,11 +190,11 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
           {/* Model Selector Dropdown */}
           <div className="flex items-center gap-1 shrink-0">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{t('model')}:</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">{t('model')}:</span>
             <select
               value={model}
               onChange={(e) => handleModelChange(e.target.value)}
-              className="border border-input rounded-md px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary truncate max-w-[150px] sm:max-w-[200px] cursor-pointer"
+              className="border border-input rounded-md px-1.5 sm:px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary truncate max-w-[120px] sm:max-w-[200px] cursor-pointer"
             >
               {SUPPORTED_MODELS.map((m) => (
                 <option key={m.id} value={m.name}>
@@ -206,12 +206,12 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
           {/* Effort Selector Dropdown (Linked to Model) */}
           <div className="flex items-center gap-1 shrink-0">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{t('effort')}:</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">{t('effort')}:</span>
             {currentModelConfig.efforts.length > 0 ? (
               <select
                 value={effort || currentModelConfig.defaultEffort || currentModelConfig.efforts[0]}
                 onChange={(e) => setEffort(e.target.value as EffortLevel)}
-                className="border border-input rounded-md px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary capitalize cursor-pointer"
+                className="border border-input rounded-md px-1.5 sm:px-2 py-1 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary capitalize cursor-pointer"
               >
                 {currentModelConfig.efforts.map((lvl) => (
                   <option key={lvl} value={lvl}>
@@ -221,7 +221,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
               </select>
             ) : (
               <span
-                className="text-[11px] border border-border/60 rounded px-2 py-0.5 bg-muted/40 text-muted-foreground/70 cursor-not-allowed select-none"
+                className="text-[10px] sm:text-[11px] border border-border/60 rounded px-1.5 sm:px-2 py-0.5 bg-muted/40 text-muted-foreground/70 cursor-not-allowed select-none hidden sm:inline"
               >
                 {t('effortAuto')}
               </span>
@@ -230,7 +230,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         </div>
 
         {/* Right Cluster: Action Buttons (History, File Explorer, WebTTY, Status) */}
-        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
           {/* Load History / Load More Button */}
           <button
             onClick={() => loadHistory(5)}
@@ -242,14 +242,14 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
                 ? t('loadEarlierMessages')
                 : `${t('loadEarlierMessages')} (+5)`
             }
-            className={`text-xs border border-border rounded-md px-2.5 py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`text-xs border border-border rounded-md px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer ${
               !hasMoreHistory
                 ? 'opacity-40 cursor-not-allowed bg-muted/40 text-muted-foreground'
                 : 'hover:bg-accent text-foreground'
             }`}
           >
             <History className={`w-3.5 h-3.5 ${historyLoading ? 'animate-spin' : ''}`} />
-            <span>
+            <span className="hidden md:inline">
               {historyLoading
                 ? t('loadingEarlier')
                 : loadedTurns === 0
@@ -260,7 +260,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             </span>
             {totalTurns !== null && (
               <span className="text-[10px] opacity-75 font-mono">
-                ({loadedTurns}/{totalTurns})
+                {loadedTurns}/{totalTurns}
               </span>
             )}
           </button>
@@ -269,26 +269,27 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           <button
             onClick={() => setShowFileExplorer(!showFileExplorer)}
             title={t('fileExplorer')}
-            className={`text-xs border rounded-md px-2.5 py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`text-xs border rounded-md p-1.5 sm:px-2.5 sm:py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
               showFileExplorer
                 ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                 : 'text-muted-foreground hover:text-foreground border-border hover:bg-accent'
             }`}
           >
             <FolderTree className="w-3.5 h-3.5" />
-            <span>{t('fileExplorer')}</span>
+            <span className="hidden sm:inline">{t('fileExplorer')}</span>
           </button>
 
           {/* Open WebTTY Button */}
           <button
             onClick={() => setShowTty(true)}
-            className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-md px-2.5 py-1 hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
+            title={t('webtty')}
+            className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-md p-1.5 sm:px-2.5 sm:py-1 hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Terminal className="w-3.5 h-3.5" />
-            <span>{t('webtty')}</span>
+            <span className="hidden sm:inline">{t('webtty')}</span>
           </button>
 
-          <span className="text-[11px] font-mono uppercase bg-secondary px-2 py-0.5 rounded text-secondary-foreground">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase bg-secondary px-1.5 sm:px-2 py-0.5 rounded text-secondary-foreground">
             {status === 'IDLE'
               ? t('idle')
               : status === 'RUNNING'

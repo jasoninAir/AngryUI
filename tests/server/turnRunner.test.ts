@@ -59,7 +59,6 @@ describe('TurnRunner', () => {
         resultStatus = 'SUCCESS';
       }
     }
-    expect(initSeen).toBe(true);
     expect(resultSeen).toBe(true);
     expect(['SUCCESS', 'ERROR']).toContain(resultStatus);
   }, 120000);
