@@ -1,10 +1,27 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FixedSizeList } from 'react-window';
+import { List } from 'react-window';
 import { MessageItem } from './MessageItem';
 import { useLanguage } from '@/context/LanguageContext';
 import { Loader2 } from 'lucide-react';
 
 const MESSAGE_ITEM_HEIGHT = 80;
+
+// Row component for react-window v2
+function MessageRow({
+  index,
+  style,
+  data,
+}: {
+  index: number;
+  style: React.CSSProperties;
+  data: any[];
+}) {
+  return (
+    <div style={{ ...style, paddingBottom: 16 }}>
+      <MessageItem key={data[index].id} msg={data[index]} />
+    </div>
+  );
+}
 
 export function MessageList({
   messages,
@@ -20,22 +37,15 @@ export function MessageList({
   // Measure container height for virtualization
   const measureContainer = useCallback(() => {
     if (containerRef.current) {
-      setContainerRef.current?.();
-    }
-  }, []);
-
-  const setContainerRef = useCallback(() => {
-    if (containerRef.current) {
-      const height = containerRef.current.clientHeight;
-      setContainerHeight(height);
+      setContainerHeight(containerRef.current.clientHeight);
     }
   }, []);
 
   useEffect(() => {
-    setContainerRef();
+    measureContainer();
 
     const resizeObserver = new ResizeObserver(() => {
-      setContainerRef();
+      measureContainer();
     });
 
     if (containerRef.current) {
@@ -43,7 +53,7 @@ export function MessageList({
     }
 
     return () => resizeObserver.disconnect();
-  }, [setContainerRef]);
+  }, [measureContainer]);
 
   // Scroll to bottom on new messages (unless user has scrolled up)
   useEffect(() => {
@@ -82,19 +92,13 @@ export function MessageList({
   return (
     <div ref={containerRef} className="h-full overflow-y-auto p-4">
       {useVirtualization ? (
-        <FixedSizeList
-          height={containerHeight - 16} // Subtract padding
-          itemCount={messages.length}
-          itemSize={MESSAGE_ITEM_HEIGHT}
-          width="100%"
-          style={{ paddingBottom: 16 }}
-        >
-          {({ index, style }) => (
-            <div style={{ ...style, paddingBottom: 16 }}>
-              <MessageItem key={messages[index].id} msg={messages[index]} />
-            </div>
-          )}
-        </FixedSizeList>
+        <List
+          rowComponent={MessageRow}
+          rowCount={messages.length}
+          rowHeight={MESSAGE_ITEM_HEIGHT}
+          rowProps={{ data: messages } as any}
+          style={{ height: containerHeight - 16, width: '100%' }}
+        />
       ) : (
         // Fallback to non-virtualized list while measuring
         <div className="space-y-4">
