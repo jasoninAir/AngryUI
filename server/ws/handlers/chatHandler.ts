@@ -19,7 +19,8 @@ interface ServerMsg {
   timestamp: number;
 }
 
-const TURN_TIMEOUT_MS = 5 * 60 * 1000;
+const TURN_INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of silence without any stream output
+const TURN_MAX_LIFETIME_MS = 120 * 60 * 1000; // 2 hours max per turn
 
 export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): void {
   const runner = new TurnRunner();
@@ -115,7 +116,18 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       activeTurns.set(convId, { abort: handle.abort });
       conversationHub.setStatus(convId, 'RUNNING');
 
-      const timeout = setTimeout(() => handle.abort(), TURN_TIMEOUT_MS);
+      let activityTimer: NodeJS.Timeout | null = null;
+      const resetActivityTimer = () => {
+        if (activityTimer) clearTimeout(activityTimer);
+        activityTimer = setTimeout(() => {
+          handle.abort();
+        }, TURN_INACTIVITY_TIMEOUT_MS);
+      };
+
+      resetActivityTimer();
+      const maxLifetimeTimer = setTimeout(() => {
+        handle.abort();
+      }, TURN_MAX_LIFETIME_MS);
 
       send({ type: 'session:status', conversationId: convId, payload: { state: 'RUNNING' }, timestamp: Date.now() });
 
@@ -123,6 +135,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
         let isPendingPermission = false;
         try {
           for await (const ev of handle.events) {
+            resetActivityTimer();
             if (ev.type === 'permission_required') {
               isPendingPermission = true;
               conversationHub.setStatus(convId, 'WAITING_INPUT');
@@ -153,7 +166,8 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
             timestamp: Date.now()
           });
         } finally {
-          clearTimeout(timeout);
+          if (activityTimer) clearTimeout(activityTimer);
+          clearTimeout(maxLifetimeTimer);
           activeTurns.delete(convId);
           const finalState: SessionState = isPendingPermission ? 'WAITING_INPUT' : 'IDLE';
           conversationHub.setStatus(convId, finalState);

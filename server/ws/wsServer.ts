@@ -38,16 +38,22 @@ export function attachWsServer(
       return;
     }
 
-    // Ping/pong heartbeat: ping every 25s, disconnect if no pong within 60s
+    // Ping/pong heartbeat: ping every 25s, terminate ghost connections if no pong received
+    let isAlive = true;
+    ws.on('pong', () => {
+      isAlive = true;
+    });
+
     const pingInterval = setInterval(() => {
+      if (!isAlive) {
+        ws.terminate();
+        return;
+      }
+      isAlive = false;
       if (ws.readyState === WebSocket.OPEN) {
         ws.ping();
       }
     }, 25000);
-
-    ws.on('pong', () => {
-      // Client is alive
-    });
 
     ws.on('close', () => {
       clearInterval(pingInterval);

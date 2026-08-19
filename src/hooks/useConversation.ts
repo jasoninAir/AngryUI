@@ -53,6 +53,7 @@ type Action =
   | { type: 'interactive_prompt'; active: boolean }
   | { type: 'permission_prompt'; info?: PermissionPromptInfo | null }
   | { type: 'prepend_history'; messages: Message[] }
+  | { type: 'sync_latest_history'; messages: Message[] }
   | { type: 'restore'; state: CachedConversationState }
   | { type: 'reset' };
 
@@ -72,6 +73,16 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         messages: [...newMessages, ...state.messages]
+      };
+    }
+    case 'sync_latest_history': {
+      if (action.messages.length === 0) return state;
+      const existingIds = new Set(state.messages.map((m) => m.id));
+      const newMsgs = action.messages.filter((m) => !existingIds.has(m.id));
+      if (newMsgs.length === 0) return state;
+      return {
+        ...state,
+        messages: [...state.messages, ...newMsgs]
       };
     }
     case 'user':
@@ -299,6 +310,50 @@ export function useConversation(conversationId: string) {
       });
     };
   }, [conversationId, send]);
+
+  // Resubscribe whenever WebSocket reconnects (readyState === WebSocket.OPEN) and sync latest history
+  useEffect(() => {
+    if (readyState === WebSocket.OPEN && conversationId) {
+      send({
+        type: 'chat:subscribe',
+        conversationId,
+        payload: {},
+        timestamp: Date.now()
+      });
+      // Sync latest history in case turns occurred or finished while disconnected
+      fetchConversationHistory(conversationId, 5, 0)
+        .then((res) => {
+          if (conversationIdRef.current === conversationId && res && res.messages) {
+            dispatch({ type: 'sync_latest_history', messages: res.messages as Message[] });
+            setLoadedTurns((prev) => Math.max(prev, res.loadedTurns));
+            setTotalTurns(res.totalTurns);
+            setHasMoreHistory(res.hasMore);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [readyState, conversationId, send]);
+
+  // When tab/mobile browser becomes visible again, sync latest history
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && conversationIdRef.current) {
+        const id = conversationIdRef.current;
+        fetchConversationHistory(id, 5, 0)
+          .then((res) => {
+            if (conversationIdRef.current === id && res && res.messages) {
+              dispatch({ type: 'sync_latest_history', messages: res.messages as Message[] });
+              setLoadedTurns((prev) => Math.max(prev, res.loadedTurns));
+              setTotalTurns(res.totalTurns);
+              setHasMoreHistory(res.hasMore);
+            }
+          })
+          .catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   const loadHistory = useCallback(async (limit = 5) => {
     if (historyLoading || !hasMoreHistory) return;
