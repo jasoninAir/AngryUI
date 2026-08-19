@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ThoughtAccordion } from './ThoughtAccordion';
 import { ToolCard } from './ToolCard';
 import { MarkdownContent } from './MarkdownContent';
-import { FileText, FileCode, FileSpreadsheet, ExternalLink, ZoomIn, ShieldCheck } from 'lucide-react';
+import { FileText, FileCode, FileSpreadsheet, ExternalLink, ZoomIn, ShieldCheck, Copy, Check } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 type Message =
@@ -150,6 +150,34 @@ export function MessageItem({
 }) {
   const { t } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyMarkdown = async () => {
+    if (!msg.text) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(msg.text);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = msg.text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {}
+    }
+  };
 
   if (msg.role === 'user') {
     const rawText = msg.text || '';
@@ -266,14 +294,40 @@ export function MessageItem({
   }
 
   return (
-    <div className="flex justify-start my-1.5">
-      <div className="max-w-[85%] rounded-2xl p-3.5 bg-secondary text-secondary-foreground shadow-2xs text-sm">
+    <div className="flex justify-start my-1.5 group">
+      <div className="max-w-[85%] rounded-2xl p-3.5 bg-secondary text-secondary-foreground shadow-2xs text-sm flex flex-col">
         {msg.thought && <ThoughtAccordion thought={msg.thought} />}
         <MarkdownContent
           content={msg.text || ''}
           onImageClick={(url) => setSelectedImage(url)}
           onFileClick={onFileClick}
         />
+        {Boolean(msg.text && msg.text.trim()) && (
+          <div className="flex items-center justify-end border-t border-border/40 mt-2.5 pt-1.5">
+            <button
+              onClick={handleCopyMarkdown}
+              title={copied ? t('copied') : t('copyMarkdown')}
+              aria-label={copied ? t('copied') : t('copyMarkdown')}
+              className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md transition-all cursor-pointer select-none ${
+                copied
+                  ? 'text-emerald-500 bg-emerald-500/10 font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/60 opacity-70 group-hover:opacity-100'
+              }`}
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{t('copied')}</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{t('copyMarkdown')}</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Lightbox Modal for Assistant Images */}

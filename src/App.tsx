@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { SessionStatusProvider } from './context/SessionStatusContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -150,7 +150,10 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/chat/:conversationId" element={<ChatPage />} />
+            <Route path="/c/:conversationId" element={<ChatPage />} />
+            <Route path="/session/:conversationId" element={<ChatPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
