@@ -38,12 +38,10 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
       reconnectAttemptRef.current = 0;
       setRetryCount(0);
       setReadyState(WebSocket.OPEN);
-      console.log('[WS] connected, flushing queue:', queueRef.current.length);
       // Flush queued messages sent while socket was connecting
       while (queueRef.current.length > 0) {
         const nextMsg = queueRef.current.shift();
         if (nextMsg && ws.readyState === WebSocket.OPEN) {
-          console.log('[WS] sending queued msg:', nextMsg.type);
           ws.send(JSON.stringify(nextMsg));
         }
       }
@@ -66,7 +64,7 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
       setRetryCount(reconnectAttemptRef.current);
     };
 
-    ws.onerror = () => { console.log('[WS] error'); ws.close(); };
+    ws.onerror = () => ws.close();
 
     ws.onmessage = (e) => {
       try {
@@ -89,12 +87,9 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
   }, [connect]);
 
   const send = useCallback((msg: WSMessage) => {
-    console.log('[WS] send called, type:', msg.type, 'readyState:', wsRef.current?.readyState);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log('[WS] sending directly:', msg.type);
       wsRef.current.send(JSON.stringify(msg));
     } else {
-      console.log('[WS] queueing (not open), queue size:', queueRef.current.length + 1);
       queueRef.current.push(msg);
     }
   }, []);
