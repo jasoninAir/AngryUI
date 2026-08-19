@@ -2,38 +2,45 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const PINNED_STORAGE_KEY = 'angryui_pinned_workspaces';
+let memoryFallback: string[] = [];
 
 function normalizeWorkspace(ws: string): string {
   if (!ws) return '';
   let clean = ws.trim();
   if (clean.startsWith('file://')) {
-    clean = clean.replace('file://', '');
+    clean = clean.replace(/^file:\/\//, '');
   }
   return clean.replace(/\/+$/, '');
 }
 
 export function getPinnedWorkspaces(): string[] {
-  if (typeof localStorage === 'undefined') return [];
+  if (typeof localStorage === 'undefined') {
+    return [...memoryFallback];
+  }
   try {
     const raw = localStorage.getItem(PINNED_STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) return [...memoryFallback];
     const list = JSON.parse(raw);
     if (Array.isArray(list)) {
       return list.map(normalizeWorkspace).filter(Boolean);
     }
   } catch {}
-  return [];
+  return [...memoryFallback];
 }
 
 export function setPinnedWorkspaces(workspaces: string[]): void {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    const cleanList = Array.from(new Set(workspaces.map(normalizeWorkspace).filter(Boolean)));
-    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(cleanList));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('angryui_pinned_workspaces_change', { detail: cleanList }));
-    }
-  } catch {}
+  const cleanList = Array.from(new Set(workspaces.map(normalizeWorkspace).filter(Boolean)));
+  memoryFallback = cleanList;
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(cleanList));
+    } catch {}
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('angryui_pinned_workspaces_change', { detail: cleanList }));
+  }
 }
 
 export function isWorkspacePinned(workspace: string): boolean {
