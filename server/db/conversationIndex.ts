@@ -141,14 +141,25 @@ export class ConversationIndex {
   /**
    * Group conversations by their primary workspace root.
    * By default filters out archived conversations unless showArchived is true.
+   * By default filters out derived/child Subagent sessions unless includeSubagents is true.
    */
-  groupByWorkspace(showArchived = false): GroupedProjectResponse {
+  groupByWorkspace(showArchived = false, includeSubagents = false): GroupedProjectResponse {
     const archivedIds = readArchivedIds();
     const groups = new Map<string, ConversationSummary[]>();
     let totalCount = 0;
     let archivedCount = 0;
 
     for (const c of this.byId.values()) {
+      const isSubagent = Boolean(
+        (c.parent_conversation_id && c.parent_conversation_id.trim().length > 0) ||
+        (c.nesting_depth && c.nesting_depth > 0) ||
+        c.source === 'SUBAGENT'
+      );
+
+      if (!includeSubagents && isSubagent) {
+        continue;
+      }
+
       totalCount++;
       const isArchived = archivedIds.has(c.conversation_id);
       if (isArchived) {
@@ -178,6 +189,23 @@ export class ConversationIndex {
       totalCount,
       archivedCount
     };
+  }
+
+  /**
+   * Get all child subagent conversations belonging to a parent conversation.
+   */
+  getSubagents(parentId: string): ConversationSummary[] {
+    const results: ConversationSummary[] = [];
+    const archivedIds = readArchivedIds();
+    for (const c of this.byId.values()) {
+      if (c.parent_conversation_id === parentId) {
+        results.push({
+          ...c,
+          is_archived: archivedIds.has(c.conversation_id)
+        });
+      }
+    }
+    return results;
   }
 
   private parseRow(row: any): ConversationSummary {

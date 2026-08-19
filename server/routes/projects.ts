@@ -43,11 +43,19 @@ export function createProjectsRouter(index: ConversationIndex): Router {
     res.json(result);
   });
 
-  // GET /api/projects?showArchived=true|false
+  // GET /api/conversations/:id/subagents
+  router.get('/conversations/:id/subagents', (req, res) => {
+    const { id } = req.params;
+    const subagents = index.getSubagents(id);
+    res.json({ parentId: id, subagents });
+  });
+
+  // GET /api/projects?showArchived=true|false&includeSubagents=true|false
   router.get('/projects', (req, res) => {
     const showArchived = req.query.showArchived === 'true';
+    const includeSubagents = req.query.includeSubagents === 'true';
     index.load();
-    const result = index.groupByWorkspace(showArchived);
+    const result = index.groupByWorkspace(showArchived, includeSubagents);
     res.json(result);
   });
 

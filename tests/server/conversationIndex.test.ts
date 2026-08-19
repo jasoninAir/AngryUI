@@ -92,4 +92,57 @@ describe('ConversationIndex', () => {
       idx.rename(sample.conversation_id, originalTitle);
     }
   });
+
+  it('filters out subagents by default in groupByWorkspace and retrieves them via getSubagents', () => {
+    const parentId = 'parent-session-1';
+    const subId = 'child-subagent-1';
+    idx.applyDelta([
+      {
+        conversation_id: parentId,
+        title: 'Parent Session',
+        preview: 'Parent preview',
+        step_count: 5,
+        last_modified_time: '2026-08-16T00:00:00Z',
+        workspace_uris: ['file:///tmp/workspace'],
+        status: 'COMPLETED',
+        source: 'CLI',
+        project_id: '',
+        agent_name: '',
+        parent_conversation_id: '',
+        nesting_depth: 0,
+        not_fully_idle: false,
+        killed: false,
+        last_user_input_time: '2026-08-16T00:00:00Z'
+      },
+      {
+        conversation_id: subId,
+        title: 'Child Subagent',
+        preview: 'Subagent preview',
+        step_count: 2,
+        last_modified_time: '2026-08-16T00:00:01Z',
+        workspace_uris: ['file:///tmp/workspace'],
+        status: 'COMPLETED',
+        source: 'SUBAGENT',
+        project_id: '',
+        agent_name: '',
+        parent_conversation_id: parentId,
+        nesting_depth: 1,
+        not_fully_idle: false,
+        killed: false,
+        last_user_input_time: '2026-08-16T00:00:01Z'
+      }
+    ]);
+
+    const normal = idx.groupByWorkspace(false, false);
+    const hasSubInNormal = normal.groups.some((g) => g.conversations.some((c) => c.conversation_id === subId));
+    expect(hasSubInNormal).toBe(false);
+
+    const withSubs = idx.groupByWorkspace(false, true);
+    const hasSubInWithSubs = withSubs.groups.some((g) => g.conversations.some((c) => c.conversation_id === subId));
+    expect(hasSubInWithSubs).toBe(true);
+
+    const subagents = idx.getSubagents(parentId);
+    expect(subagents.length).toBe(1);
+    expect(subagents[0].conversation_id).toBe(subId);
+  });
 });

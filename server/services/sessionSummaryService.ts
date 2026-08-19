@@ -15,9 +15,35 @@ export function cleanUserPrompt(raw: string): string {
   return text;
 }
 
+export function buildSubagentParentMap(brainDir: string): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!fs.existsSync(brainDir)) return map;
+
+  try {
+    const entries = fs.readdirSync(brainDir);
+    for (const dir of entries) {
+      const logFile = path.join(brainDir, dir, '.system_generated', 'logs', 'transcript.jsonl');
+      if (!fs.existsSync(logFile)) continue;
+      try {
+        const content = fs.readFileSync(logFile, 'utf-8');
+        const regex = /Created the following subagents:[\s\S]*?(?:\\\"|")conversationId(?:\\\"|"):\s*(?:\\\"|")([a-f0-9-]{36})(?:\\\"|")/g;
+        let match;
+        while ((match = regex.exec(content)) !== null) {
+          const subId = match[1];
+          if (subId && subId !== dir) {
+            map.set(subId, dir);
+          }
+        }
+      } catch {}
+    }
+  } catch {}
+  return map;
+}
+
 export function extractSessionSummary(
   conversationId: string,
-  fallbackWorkspace?: string
+  fallbackWorkspace?: string,
+  knownParentId?: string
 ): ConversationSummary | null {
   const agyHome = getConfig().agyHome;
   const brainDir = path.join(agyHome, 'brain', conversationId);
@@ -33,6 +59,8 @@ export function extractSessionSummary(
   let workspaceUri = fallbackWorkspace || '';
   let lastUserInputTime = new Date().toISOString();
   let lastModifiedTime = new Date().toISOString();
+  let isSubagent = Boolean(knownParentId);
+  let parentConversationId = knownParentId || '';
 
   try {
     const stats = fs.statSync(logFile);
@@ -43,6 +71,21 @@ export function extractSessionSummary(
     const content = fs.readFileSync(logFile, 'utf-8');
     const lines = content.split('\n').filter((l) => l.trim().length > 0);
     stepCount = lines.length;
+
+    // Detect Subagent checkpoint fingerprint in step 1 if not already known
+    if (!isSubagent && lines.length > 1) {
+      try {
+        const row1 = JSON.parse(lines[1]);
+        if (
+          row1.source === 'SYSTEM' &&
+          row1.type === 'CHECKPOINT' &&
+          typeof row1.content === 'string' &&
+          row1.content.includes('{{ CHECKPOINT 0 }}')
+        ) {
+          isSubagent = true;
+        }
+      } catch {}
+    }
 
     for (const line of lines) {
       try {
@@ -84,7 +127,7 @@ export function extractSessionSummary(
   }
 
   if (!title) {
-    title = `会话 ${conversationId.slice(0, 8)}`;
+    title = isSubagent ? `子任务 ${conversationId.slice(0, 8)}` : `会话 ${conversationId.slice(0, 8)}`;
   }
   if (!workspaceUri) {
     workspaceUri = fallbackWorkspace || process.cwd();
@@ -99,11 +142,11 @@ export function extractSessionSummary(
     last_modified_time: lastModifiedTime,
     workspace_uris: [cleanWs],
     status: 'COMPLETED',
-    source: 'CLI',
+    source: isSubagent ? 'SUBAGENT' : 'CLI',
     project_id: '',
     agent_name: '',
-    parent_conversation_id: '',
-    nesting_depth: 0,
+    parent_conversation_id: parentConversationId,
+    nesting_depth: isSubagent ? 1 : 0,
     not_fully_idle: false,
     killed: false,
     last_user_input_time: lastUserInputTime
@@ -134,6 +177,18 @@ export function upsertConversationSummary(summary: ConversationSummary): void {
         step_count = excluded.step_count,
         last_modified_time = excluded.last_modified_time,
         workspace_uris = excluded.workspace_uris,
+        parent_conversation_id = CASE
+          WHEN excluded.parent_conversation_id != '' THEN excluded.parent_conversation_id
+          ELSE conversation_summaries.parent_conversation_id
+        END,
+        nesting_depth = CASE
+          WHEN excluded.nesting_depth > 0 THEN excluded.nesting_depth
+          ELSE conversation_summaries.nesting_depth
+        END,
+        source = CASE
+          WHEN excluded.source != '' THEN excluded.source
+          ELSE conversation_summaries.source
+        END,
         last_user_input_time = excluded.last_user_input_time
     `);
 
@@ -198,13 +253,30 @@ export function syncUnindexedDiskSessions(): void {
       }
     }
 
-    // 2. Index any new/unindexed brain directories on disk
+    // 2. Build subagent mapping and backfill parent_conversation_id for subagents
+    const subagentMap = buildSubagentParentMap(brainDir);
+    if (subagentMap.size > 0) {
+      try {
+        const writeDb = openConversationDbWrite();
+        const updateSubagentStmt = writeDb.prepare(
+          "UPDATE conversation_summaries SET parent_conversation_id = ?, nesting_depth = 1, source = 'SUBAGENT' WHERE conversation_id = ? AND (parent_conversation_id IS NULL OR parent_conversation_id = '')"
+        );
+        for (const [subId, parentId] of subagentMap.entries()) {
+          updateSubagentStmt.run(parentId, subId);
+        }
+        writeDb.close();
+      } catch (err) {
+        console.warn('Failed to backfill subagents in SQLite:', err);
+      }
+    }
+
+    // 3. Index any new/unindexed brain directories on disk
     const entries = fs.readdirSync(brainDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.length > 10) {
         const convId = entry.name;
         if (!existingSet.has(convId)) {
-          const summary = extractSessionSummary(convId);
+          const summary = extractSessionSummary(convId, undefined, subagentMap.get(convId));
           if (summary) {
             upsertConversationSummary(summary);
           }
