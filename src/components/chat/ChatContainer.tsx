@@ -10,6 +10,7 @@ import { findDangerMatches } from '@/lib/dangerCommands';
 import { MessageList } from './MessageList';
 import { ChatInput, ChatInputHandle } from './ChatInput';
 import { FileExplorerDrawer } from './FileExplorerDrawer';
+import { QuotaModal } from '../quota/QuotaModal';
 import {
   Folder,
   History,
@@ -22,6 +23,7 @@ import {
   PlusCircle,
   SlidersHorizontal,
   FolderTree,
+  Gauge,
   X
 } from 'lucide-react';
 
@@ -110,6 +112,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   };
 
   const [showTty, setShowTty] = useState(false);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
 
   // Auto-fill workspace from database if not specified in searchParams
   useEffect(() => {
@@ -279,6 +282,16 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             <span className="hidden sm:inline">{t('fileExplorer')}</span>
           </button>
 
+          {/* Quota Button */}
+          <button
+            onClick={() => setShowQuotaModal(true)}
+            title={t('quotaTitleText')}
+            className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-md p-1.5 sm:px-2.5 sm:py-1 hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Gauge className="w-3.5 h-3.5 text-primary" />
+            <span className="hidden sm:inline">{t('quotaTab')}</span>
+          </button>
+
           {/* Open WebTTY Button */}
           <button
             onClick={() => setShowTty(true)}
@@ -308,8 +321,8 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         {/* Left / Center Area: Messages and Chat Input */}
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           {/* Messages Scroll Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <MessageList messages={messages} loading={historyLoading} />
+          <div className="flex-1 min-h-0 overflow-hidden relative">
+            <MessageList key={conversationId} messages={messages} loading={historyLoading} />
           </div>
 
           {/* Interactive Prompt Banner (if needed) */}
@@ -482,6 +495,9 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           <WebTTYModal conversationId={conversationId} onClose={() => setShowTty(false)} />
         </Suspense>
       )}
+
+      {/* Quota Modal */}
+      <QuotaModal isOpen={showQuotaModal} onClose={() => setShowQuotaModal(false)} />
     </div>
   );
 }

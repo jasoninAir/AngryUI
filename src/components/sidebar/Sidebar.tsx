@@ -7,8 +7,9 @@ import { useSessionStatus } from '@/context/SessionStatusContext';
 import { WorkspaceGroup } from './WorkspaceGroup';
 import { NewSessionModal } from './NewSessionModal';
 import { LanguageMenu } from './LanguageMenu';
-import { Archive, RefreshCw, Settings, Plus, PanelLeftClose, WifiOff } from 'lucide-react';
+import { Archive, RefreshCw, Settings, Plus, PanelLeftClose, WifiOff, Gauge } from 'lucide-react';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { QuotaModal } from '@/components/quota/QuotaModal';
 
 export function Sidebar() {
   const location = useLocation();
@@ -16,6 +17,7 @@ export function Sidebar() {
   const { t } = useLanguage();
   const { wsReadyState, wsRetryCount } = useSessionStatus();
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
 
   const {
     groups,
@@ -175,6 +177,16 @@ export function Sidebar() {
           {/* Theme Toggle */}
           <ThemeToggle />
 
+          {/* Quota Modal Trigger */}
+          <button
+            onClick={() => setShowQuotaModal(true)}
+            title={t('quotaTitleText')}
+            aria-label={t('quotaTitleText')}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center cursor-pointer"
+          >
+            <Gauge className="w-4 h-4 text-primary" />
+          </button>
+
           {/* Settings Button */}
           <Link
             to="/settings"
@@ -228,6 +240,14 @@ export function Sidebar() {
             setShowNewSessionModal(false);
             if (isMobile) closeSidebar();
           }}
+        />
+      )}
+
+      {/* Quota Modal */}
+      {showQuotaModal && (
+        <QuotaModal
+          isOpen={showQuotaModal}
+          onClose={() => setShowQuotaModal(false)}
         />
       )}
     </>

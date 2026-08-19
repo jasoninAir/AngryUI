@@ -78,6 +78,7 @@ export const translations = {
     loadEarlierMessages: 'Load Earlier Messages',
     loadingEarlier: 'Loading earlier messages...',
     allLoaded: 'All messages loaded',
+    scrollToBottom: 'Scroll to bottom',
     noMessagesYet: 'No messages yet. Send a prompt to start!',
 
     // Risk & Permissions Mode
@@ -217,6 +218,7 @@ export const translations = {
     loadEarlierMessages: '加载更早的历史记录',
     loadingEarlier: '正在加载历史记录...',
     allLoaded: '已加载全部记录',
+    scrollToBottom: '回到底部',
     noMessagesYet: '暂无消息。发送一条提示词开始吧！',
 
     // Risk & Permissions Mode
@@ -355,6 +357,7 @@ export const translations = {
     loadEarlierMessages: '載入更早的歷史記錄',
     loadingEarlier: '正在載入歷史記錄...',
     allLoaded: '已載入全部記錄',
+    scrollToBottom: '回到最底',
     noMessagesYet: '暫無訊息。發送一條提示詞開始吧！',
 
     // Risk & Permissions Mode
@@ -493,6 +496,7 @@ export const translations = {
     loadEarlierMessages: '過去のメッセージを読み込む',
     loadingEarlier: '履歴を読み込み中...',
     allLoaded: 'すべての履歴を読み込みました',
+    scrollToBottom: '一番下へスクロール',
     noMessagesYet: 'メッセージはありません。プロンプトを送信して開始してください。',
 
     // Risk & Permissions Mode
@@ -631,6 +635,7 @@ export const translations = {
     loadEarlierMessages: 'Cargar Mensajes Anteriores',
     loadingEarlier: 'Cargando historial...',
     allLoaded: 'Todo el historial cargado',
+    scrollToBottom: 'Ir al final',
     noMessagesYet: 'No hay mensajes aún. ¡Envíe un prompt para comenzar!',
 
     // Risk & Permissions Mode

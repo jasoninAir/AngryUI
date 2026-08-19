@@ -1,27 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { List } from 'react-window';
 import { MessageItem } from './MessageItem';
 import { useLanguage } from '@/context/LanguageContext';
-import { Loader2 } from 'lucide-react';
-
-const MESSAGE_ITEM_HEIGHT = 80;
-
-// Row component for react-window v2
-function MessageRow({
-  index,
-  style,
-  data,
-}: {
-  index: number;
-  style: React.CSSProperties;
-  data: any[];
-}) {
-  return (
-    <div style={{ ...style, paddingBottom: 16 }}>
-      <MessageItem key={data[index].id} msg={data[index]} />
-    </div>
-  );
-}
+import { Loader2, ArrowDown } from 'lucide-react';
 
 export function MessageList({
   messages,
@@ -31,40 +11,49 @@ export function MessageList({
   loading?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerHeight, setContainerHeight] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const isInitialScrollRef = useRef(true);
+  const prevLengthRef = useRef(0);
   const { t } = useLanguage();
 
-  // Measure container height for virtualization
-  const measureContainer = useCallback(() => {
-    if (containerRef.current) {
-      setContainerHeight(containerRef.current.clientHeight);
-    }
+  const checkScrollPosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    // Show button if user is scrolled up by more than 150px
+    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 150;
+    setShowScrollBottom(isScrolledUp);
   }, []);
 
-  useEffect(() => {
-    measureContainer();
-
-    const resizeObserver = new ResizeObserver(() => {
-      measureContainer();
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (!containerRef.current) return;
+    containerRef.current.scrollTo({
+      top: containerRef.current.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto'
     });
+    setShowScrollBottom(false);
+  }, []);
 
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-
-    return () => resizeObserver.disconnect();
-  }, [measureContainer]);
-
-  // Scroll to bottom on new messages (unless user has scrolled up)
+  // Initial scroll to bottom on load / conversation switch
   useEffect(() => {
-    if (containerRef.current && messages.length > 0) {
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-      if (isAtBottom) {
-        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    if (messages.length > 0) {
+      if (isInitialScrollRef.current || prevLengthRef.current === 0) {
+        // Immediate scroll to bottom on first load
+        requestAnimationFrame(() => {
+          scrollToBottom(false);
+        });
+        isInitialScrollRef.current = false;
+      } else if (containerRef.current) {
+        // Auto-scroll on new messages only if user was already near the bottom
+        const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 180;
+        if (isNearBottom) {
+          scrollToBottom(true);
+        }
       }
+      prevLengthRef.current = messages.length;
     }
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   if (messages.length === 0) {
     if (loading) {
@@ -86,26 +75,30 @@ export function MessageList({
     );
   }
 
-  // Use virtualization if we have a valid container height
-  const useVirtualization = containerHeight > 0;
-
   return (
-    <div ref={containerRef} className="h-full overflow-y-auto p-4">
-      {useVirtualization ? (
-        <List
-          rowComponent={MessageRow}
-          rowCount={messages.length}
-          rowHeight={MESSAGE_ITEM_HEIGHT}
-          rowProps={{ data: messages } as any}
-          style={{ height: containerHeight - 16, width: '100%' }}
-        />
-      ) : (
-        // Fallback to non-virtualized list while measuring
-        <div className="space-y-4">
-          {messages.map((m) => (
-            <MessageItem key={m.id} msg={m} />
-          ))}
-        </div>
+    <div className="relative h-full w-full overflow-hidden">
+      <div
+        ref={containerRef}
+        onScroll={checkScrollPosition}
+        className="h-full overflow-y-auto p-4 space-y-4 overscroll-contain"
+      >
+        {messages.map((m) => (
+          <MessageItem key={m.id} msg={m} />
+        ))}
+        <div ref={messagesEndRef} className="h-1 shrink-0" />
+      </div>
+
+      {/* Floating Scroll to Bottom Button */}
+      {showScrollBottom && (
+        <button
+          onClick={() => scrollToBottom(true)}
+          title={t('scrollToBottom') || 'Scroll to bottom'}
+          aria-label={t('scrollToBottom') || 'Scroll to bottom'}
+          className="absolute bottom-4 right-4 z-30 flex items-center gap-1 px-3 py-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all text-xs font-medium cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-150"
+        >
+          <ArrowDown className="w-3.5 h-3.5" />
+          <span className="text-[11px] font-medium hidden sm:inline">{t('scrollToBottom') || 'Latest'}</span>
+        </button>
       )}
     </div>
   );
