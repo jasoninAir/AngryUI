@@ -301,6 +301,13 @@ AGY_WEBUI_PORT=8080 npm start
 
 ---
 
+## 🙏 Acknowledgments & Inspiration
+
+Special thanks to [Claude Code UI (claudecodeui)](https://github.com/siteboon/claudecodeui) by [@siteboon](https://github.com/siteboon) for providing invaluable inspiration and architectural insights for modern web-based AI coding assistant interfaces.
+
+---
+
 ## 📄 License
 
 MIT License. Open source and free for the community.
+

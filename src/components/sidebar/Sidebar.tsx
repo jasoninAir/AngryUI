@@ -248,6 +248,17 @@ export function Sidebar() {
             <Gauge className="w-4 h-4 text-primary" />
           </button>
 
+          {/* Report Bug Link */}
+          <a
+            href="https://github.com/jasoninAir/AngryUI/issues/new"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t('reportBug')}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center cursor-pointer"
+          >
+            <Bug className="w-4 h-4" />
+          </a>
+
           {/* Settings Button */}
           <button
             onClick={() => {
