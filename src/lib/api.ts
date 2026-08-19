@@ -1,11 +1,46 @@
 import type { ConversationSummary } from './types';
-import { getStoredToken } from './auth';
+import { getStoredToken, clearStoredToken, broadcastTokenChange } from './auth';
 
 export async function authFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = getStoredToken();
   const headers = new Headers(init?.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  return fetch(url, { ...init, headers });
+  const res = await fetch(url, { ...init, headers });
+  if (res.status === 401 && !url.includes('/api/auth/') && !url.includes('/api/login')) {
+    clearStoredToken();
+    broadcastTokenChange(null);
+  }
+  return res;
+}
+
+export interface AuthStatusResponse {
+  authenticated: boolean;
+  tokenRequired: boolean;
+  authRequired: boolean;
+}
+
+export async function fetchAuthStatus(): Promise<AuthStatusResponse> {
+  const res = await authFetch('/api/auth/status');
+  if (!res.ok) {
+    throw new Error(`Failed to fetch auth status: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function loginWithToken(token: string): Promise<{ ok: boolean; authenticated: boolean; token?: string; error?: string }> {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  });
+  if (res.status === 429) {
+    return { ok: false, authenticated: false, error: 'Too many attempts. Please wait a minute.' };
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { ok: false, authenticated: false, error: data.error || 'Invalid token' };
+  }
+  return { ok: true, authenticated: true, token: data.token || token };
 }
 
 export interface ProjectsResponse {

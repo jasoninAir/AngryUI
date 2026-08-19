@@ -10,6 +10,7 @@ import { ConversationIndex } from './db/conversationIndex';
 import { createProjectsRouter } from './routes/projects';
 import { createSettingsRouter } from './routes/settings';
 import { createUploadRouter } from './routes/upload';
+import { createAuthRouter } from './routes/auth';
 import path from 'path';
 import fs from 'fs';
 import { DiscoveryService } from './services/discoveryService';
@@ -39,9 +40,9 @@ const corsOptions: cors.CorsOptions = config.corsOrigins.length > 0
   : false;  // same-origin when no whitelist
 app.use(cors(corsOptions));
 
-// Body limits — 1MB for JSON (50mb was a DoS vector)
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+// Body limits — 512KB for standard JSON APIs (upload router handles file streaming/base64)
+app.use(express.json({ limit: '512kb' }));
+app.use(express.urlencoded({ extended: true, limit: '512kb' }));
 
 // Rate limiting — global: 500 req/15min per IP
 app.use(rateLimit({
@@ -56,6 +57,9 @@ app.use(rateLimit({
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', agyHome: config.agyHome });
 });
+
+// Auth endpoints (public - no auth required)
+app.use('/api', createAuthRouter(config.token));
 
 // Apply auth middleware to all /api/* routes from here on
 if (config.token) {
@@ -73,9 +77,27 @@ try {
   backupSqliteDb(dbPath, config.agyHome);
 } catch {}
 
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Upload rate limit exceeded', code: 'UPLOAD_RATE_LIMITED' }
+});
+
 app.use('/api', createProjectsRouter(index));
 app.use('/api', createSettingsRouter());
-app.use('/api', createUploadRouter());
+app.use('/api', uploadLimiter, createUploadRouter());
+
+// Global structured error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ err, requestId: (req as any).requestId }, 'Unhandled server error');
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error',
+    code: err.code || 'INTERNAL_ERROR',
+    requestId: (req as any).requestId
+  });
+});
 
 // Serve static frontend assets in production mode
 const distPath = path.resolve(process.cwd(), 'dist');

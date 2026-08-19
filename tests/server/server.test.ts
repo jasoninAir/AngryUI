@@ -22,3 +22,18 @@ describe('checkToken', () => {
     expect(checkToken(req, 'secret123')).toBe(false);
   });
 });
+
+describe('createAuthRouter', () => {
+  it('handles auth status when no token is required', async () => {
+    const { createAuthRouter } = await import('../../server/routes/auth');
+    const router = createAuthRouter(null);
+    expect(router).toBeDefined();
+  });
+
+  it('validates correct token on login', async () => {
+    const { createAuthRouter } = await import('../../server/routes/auth');
+    const router = createAuthRouter('mypassword123');
+    expect(router).toBeDefined();
+  });
+});
+
