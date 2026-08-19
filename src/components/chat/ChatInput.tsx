@@ -9,7 +9,7 @@ import {
   forwardRef,
   useImperativeHandle
 } from 'react';
-import { Send, Square, Paperclip, X, FileText, Loader2, Camera } from 'lucide-react';
+import { Send, Square, Paperclip, X, FileText, Loader2, Camera, Upload } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { generateUUID } from '@/lib/uuid';
 import { getStoredToken } from '@/lib/auth';
@@ -89,9 +89,11 @@ export const ChatInput = forwardRef<
   const [stagedFiles, setStagedFiles] = useState<StagedAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
     insertSnippet: (snippet: string) => {
@@ -150,26 +152,6 @@ export const ChatInput = forwardRef<
       return prev.filter((f) => f.id !== id);
     });
   };
-
-  // Global window paste listener for capturing screenshot paste from anywhere on the page
-  useEffect(() => {
-    const handleGlobalPaste = (e: globalThis.ClipboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && target !== textareaRef.current && (target.tagName === 'INPUT' || target.isContentEditable)) {
-        return;
-      }
-      const files = extractClipboardFiles(e.clipboardData);
-      if (files.length > 0) {
-        e.preventDefault();
-        addFiles(files);
-      }
-      // iOS Safari may deny clipboard file access — let default paste proceed for text
-      // User can use paperclip button as fallback for images
-    };
-
-    window.addEventListener('paste', handleGlobalPaste);
-    return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, []);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -278,12 +260,20 @@ export const ChatInput = forwardRef<
         isDragging ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/40' : ''
       }`}
     >
-      {/* Hidden file input */}
+      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
         multiple
         accept="image/*,.pdf,.txt,.md,.json,.csv,.yaml,.yml,.docx,.xlsx,.tar,.zip"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      {/* Hidden camera input (capture environment) */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
         capture="environment"
         onChange={handleFileChange}
         className="hidden"
@@ -334,25 +324,44 @@ export const ChatInput = forwardRef<
 
       {/* Main Input Row */}
       <div className="flex items-end gap-2">
-        {/* Attachment Button */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          title={t('uploadAttachmentTooltip')}
-          className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
-        >
-          <Paperclip className="w-4 h-4" />
-        </button>
+        {/* Attachment Button with Dropdown */}
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowAttachmentMenu((v) => !v)}
+            title={t('uploadAttachmentTooltip')}
+            className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
 
-        {/* Camera Button */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          title={t('takePhoto') || 'Take photo'}
-          className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
-        >
-          <Camera className="w-4 h-4" />
-        </button>
+          {showAttachmentMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowAttachmentMenu(false)}
+              />
+              <div className="absolute bottom-full left-0 mb-1.5 z-20 bg-popup border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                <button
+                  type="button"
+                  onClick={() => { fileInputRef.current?.click(); setShowAttachmentMenu(false); }}
+                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-2.5 hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                  <span>{t('uploadFile') || 'Upload File'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { cameraInputRef.current?.click(); setShowAttachmentMenu(false); }}
+                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-2.5 hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <Camera className="w-4 h-4 text-muted-foreground" />
+                  <span>{t('takePhoto') || 'Take Photo'}</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Dynamic Textarea */}
         <textarea

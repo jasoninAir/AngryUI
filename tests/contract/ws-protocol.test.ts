@@ -5,14 +5,21 @@ describe('ClientMsgSchema round-trip', () => {
   it('chat:subscribe serializes and parses', () => {
     const msg = { type: 'chat:subscribe', conversationId: 'test' };
     const parsed = ClientMsgSchema.parse(msg);
-    expect(parsed).toEqual(msg);
+    expect(parsed.type).toBe('chat:subscribe');
   });
   it('chat:send with minimal payload', () => {
     const msg = { type: 'chat:send', conversationId: 'test', payload: { message: 'hello' } };
     expect(() => ClientMsgSchema.parse(msg)).not.toThrow();
   });
-  it('rejects chat:send with dangerouslySkipPermissions', () => {
+  it('strips dangerouslySkipPermissions from chat:send payload', () => {
     const msg = { type: 'chat:send', conversationId: 'test', payload: { message: 'hi', dangerouslySkipPermissions: true } };
-    expect(() => ClientMsgSchema.parse(msg)).toThrow();
+    const parsed = ClientMsgSchema.parse(msg);
+    // The field must be silently stripped — server never sees it
+    expect((parsed as any).payload).not.toHaveProperty('dangerouslySkipPermissions');
+    expect((parsed as any).payload.message).toBe('hi');
+  });
+  it('tolerates extra timestamp field on envelope', () => {
+    const msg = { type: 'chat:subscribe', conversationId: 'test', payload: {}, timestamp: Date.now() };
+    expect(() => ClientMsgSchema.parse(msg)).not.toThrow();
   });
 });

@@ -2,7 +2,9 @@ import { Router } from 'express';
 import {
   getAllowedCommands,
   addAllowedCommand,
-  removeAllowedCommand
+  removeAllowedCommand,
+  readSettings,
+  writeSettings
 } from '../services/settingsService';
 
 export function createSettingsRouter(): Router {
@@ -24,6 +26,17 @@ export function createSettingsRouter(): Router {
   router.delete('/settings/permissions/:pattern', (req, res) => {
     const pattern = decodeURIComponent(req.params.pattern);
     removeAllowedCommand(pattern);
+    res.json({ ok: true });
+  });
+
+  router.put('/settings/token', (req, res) => {
+    const { token } = req.body ?? {};
+    if (typeof token !== 'string') {
+      return res.status(400).json({ error: 'token must be a string' });
+    }
+    const settings = readSettings();
+    settings.accessToken = token;
+    writeSettings(settings);
     res.json({ ok: true });
   });
 

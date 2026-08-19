@@ -1,7 +1,12 @@
 import { z } from 'zod';
 
+// Client messages may include optional `timestamp` and `payload` fields
+// that the server does not use but must tolerate. Use .passthrough() on
+// the outer envelope so extra keys (like `timestamp`) don't cause
+// validation failures. Inner payloads use .strip() to silently discard
+// unknown keys (e.g. dangerouslySkipPermissions — server-controlled only).
 export const ClientMsgSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('chat:subscribe'), conversationId: z.string() }).strict(),
+  z.object({ type: z.literal('chat:subscribe'), conversationId: z.string() }).passthrough(),
   z.object({
     type: z.literal('chat:send'),
     conversationId: z.string(),
@@ -10,13 +15,13 @@ export const ClientMsgSchema = z.discriminatedUnion('type', [
       model: z.string().optional(),
       effort: z.enum(['low', 'medium', 'high']).optional(),
       workspace: z.string().optional(),
-      // NOTE: dangerouslySkipPermissions intentionally ABSENT — server-controlled only
-    }).strict(),
-  }).strict(),
-  z.object({ type: z.literal('chat:unsubscribe'), conversationId: z.string() }).strict(),
-  z.object({ type: z.literal('chat:cancel'), conversationId: z.string() }).strict(),
-  z.object({ type: z.literal('chat:quota') }).strict(),
-  z.object({ type: z.literal('chat:set_status'), conversationId: z.string(), payload: z.object({ status: z.string() }).strict() }).strict(),
+      // NOTE: dangerouslySkipPermissions is silently stripped — server-controlled only
+    }).strip(),
+  }).passthrough(),
+  z.object({ type: z.literal('chat:unsubscribe'), conversationId: z.string() }).passthrough(),
+  z.object({ type: z.literal('chat:cancel'), conversationId: z.string() }).passthrough(),
+  z.object({ type: z.literal('chat:quota') }).passthrough(),
+  z.object({ type: z.literal('chat:set_status'), conversationId: z.string(), payload: z.object({ status: z.string() }) }).passthrough(),
 ]);
 
 export const ServerMsgSchema = z.discriminatedUnion('type', [

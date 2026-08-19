@@ -19,7 +19,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         AGY_WEBUI_PORT: 5173,
-        AGY_WEBUI_HOST: '0.0.0.0'
+        AGY_WEBUI_HOST: '0.0.0.0',
+	AGY_WEBUI_TOKEN: 'angryui'
       }
     }
   ]

@@ -170,7 +170,7 @@ export function useConversation(conversationId: string) {
   // Direct synchronous WebSocket message handler
   const handleWsMessage = useCallback((msg: WSMessage) => {
     if (!msg) return;
-    if (msg.conversationId && msg.conversationId !== conversationIdRef.current) return;
+    if (msg.conversationId && msg.conversationId !== 'system' && msg.conversationId !== conversationIdRef.current) return;
 
     if (msg.type === 'session:status') {
       const nextState = msg.payload?.state || 'IDLE';
@@ -212,6 +212,11 @@ export function useConversation(conversationId: string) {
       }
       dispatch({ type: 'interactive_prompt', active: true });
     }
+  }, []);
+
+  const wsUrl = useCallback(() => {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${proto}://${location.host}/ws`;
   }, []);
 
   const { send, readyState } = useWebSocket(wsUrl(), handleWsMessage);

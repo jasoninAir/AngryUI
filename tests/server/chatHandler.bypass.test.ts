@@ -21,7 +21,7 @@ describe('dangerouslySkipPermissions bypass prevention', () => {
     (globalThis as any).__test_capturedOptions = null;
   });
 
-  it('server rejects messages with dangerouslySkipPermissions at entry point', async () => {
+  it('server strips dangerouslySkipPermissions before reaching TurnRunner', async () => {
     let messageHandler: ((data: Buffer) => void) | null = null;
     const fakeWs = {
       send: vi.fn(),
@@ -38,21 +38,28 @@ describe('dangerouslySkipPermissions bypass prevention', () => {
 
     handleChatConnection(fakeWs, fakeIndex);
 
-    // Manually trigger the message handler with invalid payload
+    // Send a message with dangerouslySkipPermissions in the payload
     messageHandler!(JSON.stringify({
       type: 'chat:send',
       conversationId: 'test-conv',
       payload: { message: 'hello', dangerouslySkipPermissions: true }
     }));
 
-    // Server MUST reject messages with unknown fields at schema validation
-    // The message is rejected before reaching TurnRunner
-    const capturedOptions = (globalThis as any).__test_capturedOptions;
-    expect(capturedOptions).toBeNull();
+    // Wait for async event processing
+    await new Promise((r) => setTimeout(r, 50));
 
-    // Verify that a chat:error was sent back to the client
-    expect(fakeWs.send).toHaveBeenCalledWith(
-      expect.stringContaining('"type":"chat:error"')
+    // The message SHOULD be accepted (not rejected), but the dangerous
+    // field must be stripped by Zod .strip() before reaching TurnRunner
+    const capturedOptions = (globalThis as any).__test_capturedOptions;
+    expect(capturedOptions).not.toBeNull();
+    expect(capturedOptions.message).toBe('hello');
+    // The key assertion: dangerouslySkipPermissions never reaches the runner
+    expect(capturedOptions).not.toHaveProperty('dangerouslySkipPermissions');
+
+    // No chat:error should have been sent — the message was valid
+    const errorCalls = fakeWs.send.mock.calls.filter((c: any) =>
+      c[0].includes('"type":"chat:error"')
     );
+    expect(errorCalls.length).toBe(0);
   });
 });

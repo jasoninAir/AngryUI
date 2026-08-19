@@ -95,6 +95,8 @@ export const translations = {
     uploading: 'Uploading...',
     attachmentsReady: 'attachments ready',
     removeAttachment: 'Remove attachment',
+    takePhoto: 'Take Photo',
+    uploadFile: 'Upload File',
     uploadAttachmentTooltip: 'Upload image or document (supports Ctrl+V paste / drag & drop)',
     closeLightbox: 'Close',
 
@@ -122,6 +124,15 @@ export const translations = {
     quotaTitleText: 'Antigravity Quota Status',
     refreshQuota: 'Refresh Quota',
     loadingQuota: 'Loading quota information...',
+
+    // Security Panel
+    securityTitle: 'Access Token',
+    securityDesc: 'Set or update the access token used to authenticate with the Antigravity server. Save and reload the page for changes to take effect.',
+    accessTokenLabel: 'Access Token',
+    accessTokenPlaceholder: 'Enter access token',
+    saveToken: 'Save Token',
+    tokenSaveSuccess: 'Token saved. Reload the page to apply changes.',
+    tokenSaveError: 'Failed to save token.',
 
     // Sound Panel
     soundTitle: 'Notification Sounds',
@@ -215,6 +226,8 @@ export const translations = {
     uploading: '上传中...',
     attachmentsReady: '个附件已就绪',
     removeAttachment: '移除附件',
+    takePhoto: '拍照',
+    uploadFile: '上传文件',
     uploadAttachmentTooltip: '上传图片或文档附件 (支持直接 Ctrl+V 粘贴截图 / 拖拽文件)',
     closeLightbox: '关闭大图',
 
@@ -244,6 +257,14 @@ export const translations = {
     loadingQuota: '正在获取配额信息...',
 
     // Sound Panel
+    // Security Panel
+    securityTitle: '访问令牌',
+    securityDesc: '设置或更新用于连接 Antigravity 服务器的访问令牌。保存后需重新加载页面以使更改生效。',
+    accessTokenLabel: '访问令牌',
+    accessTokenPlaceholder: '输入访问令牌',
+    saveToken: '保存令牌',
+    tokenSaveSuccess: '令牌已保存，重新加载页面后生效。',
+    tokenSaveError: '保存令牌失败。',
     soundTitle: '提示音通知',
     soundDesc: '当任务执行结束或遇到需要用户交互授权的节点时，自动合成播放提示音。',
     enableSound: '启用提示音',
@@ -335,6 +356,8 @@ export const translations = {
     uploading: '上傳中...',
     attachmentsReady: '個附件已就緒',
     removeAttachment: '移除附件',
+    takePhoto: '拍照',
+    uploadFile: '上傳檔案',
     uploadAttachmentTooltip: '上傳圖片或文件附件 (支援直接 Ctrl+V 貼上截圖 / 拖曳檔案)',
     closeLightbox: '關閉大圖',
 
@@ -364,6 +387,14 @@ export const translations = {
     loadingQuota: '正在獲取配額資訊...',
 
     // Sound Panel
+    // Security Panel
+    securityTitle: '訪問令牌',
+    securityDesc: '設定或更新用於連接 Antigravity 伺服器的訪問令牌。儲存後需重新載入頁面以使變更生效。',
+    accessTokenLabel: '訪問令牌',
+    accessTokenPlaceholder: '輸入訪問令牌',
+    saveToken: '儲存令牌',
+    tokenSaveSuccess: '令牌已儲存，重新載入頁面後生效。',
+    tokenSaveError: '儲存令牌失敗。',
     soundTitle: '提示音通知',
     soundDesc: '當任務執行結束或遇到需要使用者交互授權的節點時，自動合成播放提示音。',
     enableSound: '啟用提示音',
@@ -455,6 +486,8 @@ export const translations = {
     uploading: 'アップロード中...',
     attachmentsReady: '件の添付ファイル',
     removeAttachment: '添付を削除',
+    takePhoto: '写真を撮る',
+    uploadFile: 'ファイルをアップロード',
     uploadAttachmentTooltip: '画像やドキュメントをアップロード (Ctrl+V 貼り付け / ドラッグ対応)',
     closeLightbox: '閉じる',
 
@@ -484,6 +517,14 @@ export const translations = {
     loadingQuota: 'クォータ情報を取得中...',
 
     // Sound Panel
+    // Security Panel
+    securityTitle: 'アクセストークン',
+    securityDesc: 'Antigravity サーバーへの認証に使用するアクセストークンを設定または更新します。変更を適用するには保存後にページを再読み込みしてください。',
+    accessTokenLabel: 'アクセストークン',
+    accessTokenPlaceholder: 'アクセストークンを入力',
+    saveToken: 'トークンを保存',
+    tokenSaveSuccess: 'トークンが保存されました。ページを再読み込みして変更を適用してください。',
+    tokenSaveError: 'トークンの保存に失敗しました。',
     soundTitle: '通知音',
     soundDesc: 'タスクの完了時や確認が必要な時に自動で通知音を再生します。',
     enableSound: '通知音を有効化',
@@ -575,6 +616,8 @@ export const translations = {
     uploading: 'Subiendo...',
     attachmentsReady: 'adjuntos listos',
     removeAttachment: 'Eliminar adjunto',
+    takePhoto: 'Tomar Foto',
+    uploadFile: 'Subir Archivo',
     uploadAttachmentTooltip: 'Subir imágenes o documentos (soporta Ctrl+V pegar / arrastrar)',
     closeLightbox: 'Cerrar',
 
@@ -604,6 +647,14 @@ export const translations = {
     loadingQuota: 'Obteniendo información de cuota...',
 
     // Sound Panel
+    // Security Panel
+    securityTitle: 'Token de Acceso',
+    securityDesc: 'Configure o actualice el token de acceso utilizado para autenticarse con el servidor Antigravity. Guarde y recargue la pagina para aplicar los cambios.',
+    accessTokenLabel: 'Token de Acceso',
+    accessTokenPlaceholder: 'Ingrese token de acceso',
+    saveToken: 'Guardar Token',
+    tokenSaveSuccess: 'Token guardado. Recargue la pagina para aplicar los cambios.',
+    tokenSaveError: 'Error al guardar el token.',
     soundTitle: 'Sonidos de Notificación',
     soundDesc: 'Sintetiza sonidos cuando las tareas finalizan o cuando se requiere confirmación.',
     enableSound: 'Activar Sonidos',

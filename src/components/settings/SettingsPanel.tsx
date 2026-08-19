@@ -1,5 +1,6 @@
 import { PermissionsPanel } from './PermissionsPanel';
 import { QuotaPanel } from './QuotaPanel';
+import { SecurityPanel } from './SecurityPanel';
 import { SoundPanel } from './SoundPanel';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -12,6 +13,7 @@ export function SettingsPanel() {
         <h1 className="text-2xl font-bold">{t('settingsTitle')}</h1>
         <p className="text-xs text-muted-foreground mt-1">{t('settingsDesc')}</p>
       </div>
+      <SecurityPanel />
       <SoundPanel />
       <PermissionsPanel />
       <QuotaPanel />
