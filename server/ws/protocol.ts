@@ -15,7 +15,7 @@ export const ClientMsgSchema = z.discriminatedUnion('type', [
       model: z.string().optional(),
       effort: z.enum(['low', 'medium', 'high']).optional(),
       workspace: z.string().optional(),
-      // NOTE: dangerouslySkipPermissions is silently stripped — server-controlled only
+      dangerouslySkipPermissions: z.boolean().optional(),
     }).strip(),
   }).passthrough(),
   z.object({ type: z.literal('chat:unsubscribe'), conversationId: z.string() }).passthrough(),

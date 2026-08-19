@@ -16,12 +16,12 @@ vi.mock('../../server/services/turnRunner', () => ({
   },
 }));
 
-describe('dangerouslySkipPermissions bypass prevention', () => {
+describe('dangerouslySkipPermissions in chatHandler', () => {
   beforeEach(() => {
     (globalThis as any).__test_capturedOptions = null;
   });
 
-  it('server strips dangerouslySkipPermissions before reaching TurnRunner', async () => {
+  it('server passes dangerouslySkipPermissions from payload to TurnRunner for Auto-Approve mode', async () => {
     let messageHandler: ((data: Buffer) => void) | null = null;
     const fakeWs = {
       send: vi.fn(),
@@ -38,7 +38,7 @@ describe('dangerouslySkipPermissions bypass prevention', () => {
 
     handleChatConnection(fakeWs, fakeIndex);
 
-    // Send a message with dangerouslySkipPermissions in the payload
+    // Send a message with dangerouslySkipPermissions in the payload (Auto-Approve mode)
     messageHandler!(JSON.stringify({
       type: 'chat:send',
       conversationId: 'test-conv',
@@ -48,15 +48,13 @@ describe('dangerouslySkipPermissions bypass prevention', () => {
     // Wait for async event processing
     await new Promise((r) => setTimeout(r, 50));
 
-    // The message SHOULD be accepted (not rejected), but the dangerous
-    // field must be stripped by Zod .strip() before reaching TurnRunner
+    // The message is accepted and dangerouslySkipPermissions is forwarded to TurnRunner
     const capturedOptions = (globalThis as any).__test_capturedOptions;
     expect(capturedOptions).not.toBeNull();
     expect(capturedOptions.message).toBe('hello');
-    // The key assertion: dangerouslySkipPermissions never reaches the runner
-    expect(capturedOptions).not.toHaveProperty('dangerouslySkipPermissions');
+    expect(capturedOptions.dangerouslySkipPermissions).toBe(true);
 
-    // No chat:error should have been sent — the message was valid
+    // No chat:error should have been sent
     const errorCalls = fakeWs.send.mock.calls.filter((c: any) =>
       c[0].includes('"type":"chat:error"')
     );

@@ -15,38 +15,41 @@ function getMetaFilePath(): string {
   return path.join(dir, 'archived-sessions.json');
 }
 
+let cachedArchivedIds: Set<string> | null = null;
+
 export function readArchivedIds(): Set<string> {
+  if (cachedArchivedIds) {
+    return cachedArchivedIds;
+  }
   const filePath = getMetaFilePath();
   if (!existsSync(filePath)) {
-    return new Set<string>();
+    cachedArchivedIds = new Set<string>();
+    return cachedArchivedIds;
   }
   try {
     const raw: ArchiveMetaFile = JSON.parse(readFileSync(filePath, 'utf-8'));
-    return new Set(Array.isArray(raw.archivedIds) ? raw.archivedIds : []);
+    cachedArchivedIds = new Set(Array.isArray(raw.archivedIds) ? raw.archivedIds : []);
+    return cachedArchivedIds;
   } catch {
-    return new Set<string>();
+    cachedArchivedIds = new Set<string>();
+    return cachedArchivedIds;
   }
 }
 
 export function writeArchivedIds(ids: Set<string>): void {
+  cachedArchivedIds = new Set(ids);
   const filePath = getMetaFilePath();
   const dir = path.dirname(filePath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  const tmpPath = `${filePath}.${randomUUID()}.tmp`;
   const data: ArchiveMetaFile = {
     archivedIds: Array.from(ids)
   };
   try {
-    writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
-    renameSync(tmpPath, filePath);
-  } catch (e) {
-    if (existsSync(tmpPath)) {
-      try { unlinkSync(tmpPath); } catch {}
-    }
-    // Fallback direct write
     writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to write archived sessions:', e);
   }
 }
 

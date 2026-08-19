@@ -11,11 +11,10 @@ describe('ClientMsgSchema round-trip', () => {
     const msg = { type: 'chat:send', conversationId: 'test', payload: { message: 'hello' } };
     expect(() => ClientMsgSchema.parse(msg)).not.toThrow();
   });
-  it('strips dangerouslySkipPermissions from chat:send payload', () => {
+  it('parses dangerouslySkipPermissions in chat:send payload for Auto-Approve mode', () => {
     const msg = { type: 'chat:send', conversationId: 'test', payload: { message: 'hi', dangerouslySkipPermissions: true } };
     const parsed = ClientMsgSchema.parse(msg);
-    // The field must be silently stripped — server never sees it
-    expect((parsed as any).payload).not.toHaveProperty('dangerouslySkipPermissions');
+    expect((parsed as any).payload.dangerouslySkipPermissions).toBe(true);
     expect((parsed as any).payload.message).toBe('hi');
   });
   it('tolerates extra timestamp field on envelope', () => {

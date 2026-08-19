@@ -99,7 +99,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
 
     if (safeMsg.type === 'chat:send' && safeMsg.conversationId && safeMsg.payload) {
       const convId = safeMsg.conversationId;
-      const { message, model, effort, workspace } = safeMsg.payload;
+      const { message, model, effort, workspace, dangerouslySkipPermissions } = safeMsg.payload;
 
       subscribeConversation(convId);
 
@@ -108,7 +108,8 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
         message,
         model,
         effort,
-        cwd: workspace
+        cwd: workspace,
+        dangerouslySkipPermissions: Boolean(dangerouslySkipPermissions)
       });
 
       activeTurns.set(convId, { abort: handle.abort });
@@ -119,11 +120,11 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       send({ type: 'session:status', conversationId: convId, payload: { state: 'RUNNING' }, timestamp: Date.now() });
 
       (async () => {
-        let hadPermissionRequired = false;
+        let isPendingPermission = false;
         try {
           for await (const ev of handle.events) {
             if (ev.type === 'permission_required') {
-              hadPermissionRequired = true;
+              isPendingPermission = true;
               conversationHub.setStatus(convId, 'WAITING_INPUT');
               send({
                 type: 'chat:interactive_prompt',
@@ -131,9 +132,14 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
                 payload: { tool: ev.tool, command: ev.command, message: ev.message },
                 timestamp: Date.now()
               });
+            } else if (ev.type === 'step_update' || ev.type === 'result') {
+              if (ev.type === 'result') {
+                isPendingPermission = false;
+              }
             }
             conversationHub.publish(convId, ev);
           }
+          isPendingPermission = false;
           send({ type: 'chat:done', conversationId: convId, payload: {}, timestamp: Date.now() });
         } catch (e: any) {
           send({
@@ -149,7 +155,7 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
         } finally {
           clearTimeout(timeout);
           activeTurns.delete(convId);
-          const finalState: SessionState = hadPermissionRequired ? 'WAITING_INPUT' : 'IDLE';
+          const finalState: SessionState = isPendingPermission ? 'WAITING_INPUT' : 'IDLE';
           conversationHub.setStatus(convId, finalState);
           send({ type: 'session:status', conversationId: convId, payload: { state: finalState }, timestamp: Date.now() });
 

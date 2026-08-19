@@ -10,6 +10,7 @@ export interface TurnOptions {
   model?: string;
   effort?: 'low' | 'medium' | 'high';
   cwd?: string;
+  dangerouslySkipPermissions?: boolean;
 }
 
 export interface TurnHandle {
@@ -59,7 +60,7 @@ export class TurnRunner {
     }
 
     const formattedModel = formatAgyModel(opts.model, opts.effort);
-    const allowSkip = getConfig().allowSkipPermissions;
+    const allowSkip = Boolean(opts.dangerouslySkipPermissions || getConfig().allowSkipPermissions);
     const args = [
       '--conversation', opts.conversationId,
       '--add-dir', runCwd,
@@ -144,21 +145,21 @@ export class TurnRunner {
         }
       }
 
-      // Check if process was terminated due to permission denial
-      if (
-        stderrBuffer.includes('jetski:') ||
-        stderrBuffer.includes('permission') ||
-        stderrBuffer.includes('auto-denied') ||
-        buffer.includes('jetski:')
-      ) {
-        push({
-          type: 'permission_required',
-          tool: 'command',
-          command: lastProposedCommand || undefined,
-          message: stderrBuffer.trim() || 'Command permission required by agent'
-        });
-      } else if (code !== 0 && code !== null && stderrBuffer.trim()) {
-        push({ type: 'error', message: `CLI exited with code ${code}: ${stderrBuffer.trim()}` });
+      // Check if process failed specifically due to permission denial (only on non-zero exit)
+      if (code !== 0 && code !== null) {
+        if (
+          stderrBuffer.includes('jetski:') ||
+          /user denied permission|required the "command" permission|auto-denied/i.test(stderrBuffer)
+        ) {
+          push({
+            type: 'permission_required',
+            tool: 'command',
+            command: lastProposedCommand || undefined,
+            message: stderrBuffer.trim() || 'Command permission required by agent'
+          });
+        } else if (stderrBuffer.trim()) {
+          push({ type: 'error', message: `CLI exited with code ${code}: ${stderrBuffer.trim()}` });
+        }
       }
       closed = true;
       push(null);

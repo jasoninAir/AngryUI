@@ -63,7 +63,7 @@ function reducer(state: State, action: Action): State {
         messages: action.state.messages,
         status: 'IDLE',
         interactivePrompt: false,
-        permissionPrompt: action.state.permissionPrompt ?? null
+        permissionPrompt: null
       };
     case 'prepend_history': {
       // Filter out messages that already exist by ID to avoid duplicates
@@ -177,8 +177,16 @@ export function useConversation(conversationId: string) {
       if (prevStatusRef.current === 'RUNNING' && nextState === 'IDLE') {
         soundManager.playTaskComplete();
       }
+      if (nextState === 'IDLE') {
+        dispatch({ type: 'interactive_prompt', active: false });
+        dispatch({ type: 'permission_prompt', info: null });
+      }
       prevStatusRef.current = nextState;
       dispatch({ type: 'status', status: nextState });
+    } else if (msg.type === 'chat:done') {
+      dispatch({ type: 'interactive_prompt', active: false });
+      dispatch({ type: 'permission_prompt', info: null });
+      dispatch({ type: 'status', status: 'IDLE' });
     } else if (msg.type === 'chat:stream') {
       const ev = msg.payload;
       if (ev?.type === 'permission_required') {
