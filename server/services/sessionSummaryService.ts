@@ -217,11 +217,11 @@ export function upsertConversationSummary(summary: ConversationSummary): void {
   }
 }
 
-export function syncUnindexedDiskSessions(): void {
+export function syncUnindexedDiskSessions(force = false): void {
   const agyHome = getConfig().agyHome;
   const brainDir = path.join(agyHome, 'brain');
   const conversationsDir = path.join(agyHome, 'conversations');
-  if (!fs.existsSync(brainDir)) return;
+  if (!fs.existsSync(brainDir) && !fs.existsSync(conversationsDir)) return;
 
   try {
     const db = openConversationDb();
@@ -254,7 +254,7 @@ export function syncUnindexedDiskSessions(): void {
     }
 
     // 2. Build subagent mapping and backfill parent_conversation_id for subagents
-    const subagentMap = buildSubagentParentMap(brainDir);
+    const subagentMap = fs.existsSync(brainDir) ? buildSubagentParentMap(brainDir) : new Map<string, string>();
     if (subagentMap.size > 0) {
       try {
         const writeDb = openConversationDbWrite();
@@ -270,15 +270,35 @@ export function syncUnindexedDiskSessions(): void {
       }
     }
 
-    // 3. Index any new/unindexed brain directories on disk
-    const entries = fs.readdirSync(brainDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isDirectory() && entry.name.length > 10) {
-        const convId = entry.name;
-        if (!existingSet.has(convId)) {
-          const summary = extractSessionSummary(convId, undefined, subagentMap.get(convId));
-          if (summary) {
-            upsertConversationSummary(summary);
+    // 3. Index brain directories on disk
+    if (fs.existsSync(brainDir)) {
+      const entries = fs.readdirSync(brainDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && entry.name.length > 10) {
+          const convId = entry.name;
+          if (!existingSet.has(convId) || force) {
+            const summary = extractSessionSummary(convId, undefined, subagentMap.get(convId));
+            if (summary) {
+              upsertConversationSummary(summary);
+              existingSet.add(convId);
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Index conversations/*.db files on disk
+    if (fs.existsSync(conversationsDir)) {
+      const convEntries = fs.readdirSync(conversationsDir);
+      for (const f of convEntries) {
+        if (f.endsWith('.db')) {
+          const convId = f.replace(/\.db$/, '');
+          if ((!existingSet.has(convId) || force) && convId.length > 10) {
+            const summary = extractSessionSummary(convId, undefined, subagentMap.get(convId));
+            if (summary) {
+              upsertConversationSummary(summary);
+              existingSet.add(convId);
+            }
           }
         }
       }

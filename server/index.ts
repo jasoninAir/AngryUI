@@ -110,9 +110,23 @@ app.use((err: any, req: express.Request, res: express.Response, _next: express.N
 // Serve static frontend assets in production mode
 const distPath = path.resolve(process.cwd(), 'dist');
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    setHeaders: (res, pathUrl) => {
+      if (pathUrl.endsWith('index.html') || pathUrl.endsWith('sw.js') || pathUrl.endsWith('manifest.webmanifest')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      } else if (pathUrl.includes('/assets/')) {
+        // Hashed static chunks in assets/ can be cached immutably
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
   app.use((req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/ws')) return next();
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

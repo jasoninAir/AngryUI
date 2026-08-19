@@ -31,8 +31,8 @@ export interface GroupedProjectResponse {
 export class ConversationIndex {
   private byId = new Map<string, ConversationSummary>();
 
-  load(): void {
-    syncUnindexedDiskSessions();
+  load(force = false): void {
+    syncUnindexedDiskSessions(force);
     const db = openConversationDb();
     const rows = db.prepare(SELECT_ALL).all() as any[];
     this.byId.clear();

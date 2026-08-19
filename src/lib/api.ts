@@ -77,8 +77,12 @@ export async function fetchConversationHistory(
   return res.json();
 }
 
-export async function fetchProjects(showArchived = false): Promise<ProjectsResponse> {
-  const url = `/api/projects${showArchived ? '?showArchived=true' : ''}`;
+export async function fetchProjects(showArchived = false, force = false): Promise<ProjectsResponse> {
+  const params = new URLSearchParams();
+  if (showArchived) params.set('showArchived', 'true');
+  if (force) params.set('force', 'true');
+  const qs = params.toString();
+  const url = `/api/projects${qs ? `?${qs}` : ''}`;
   const res = await authFetch(url);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   return res.json();

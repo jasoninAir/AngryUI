@@ -163,12 +163,12 @@ export function Sidebar() {
             </button>
             {/* Refresh Button */}
             <button
-              onClick={() => refresh()}
+              onClick={() => refresh(true)}
               disabled={loading}
-              title={t('refreshFiles')}
+              title={t('refreshSessions')}
               className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 transition-colors cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-primary' : ''}`} />
             </button>
             {/* Collapse Sidebar Button */}
             <button

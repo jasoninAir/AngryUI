@@ -16,31 +16,33 @@ export function useProjectIndex() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
+    setLoading(true);
     try {
-      const data = await fetchProjects(showArchived);
+      const data = await fetchProjects(showArchived, force);
       setGroups(data.groups ?? []);
       setArchivedCount(data.archivedCount ?? 0);
       setTotalCount(data.totalCount ?? 0);
     } catch (e) {
       console.error('Failed to fetch projects:', e);
+    } finally {
+      setLoading(false);
     }
   }, [showArchived]);
 
   useEffect(() => {
-    setLoading(true);
-    refresh().finally(() => setLoading(false));
+    refresh(false);
 
     const onVisibilityChange = () => {
       if (!document.hidden) {
-        refresh();
+        refresh(false);
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     const id = setInterval(() => {
       if (!document.hidden) {
-        refresh();
+        refresh(false);
       }
     }, 5000);
 
