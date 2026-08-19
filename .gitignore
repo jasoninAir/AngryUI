@@ -73,3 +73,6 @@ coverage/
 .claude/
 .antigravity/
 .system_generated/
+
+# Documentation (local only - not published to git)
+docs/
