@@ -94,7 +94,12 @@ function formatLanguage(lang: string = ''): string {
   return map[clean] || (clean ? clean.toUpperCase() : 'Code');
 }
 
-export function MarkdownContent({ content, onImageClick, className = '' }: MarkdownContentProps) {
+export function MarkdownContent({
+  content,
+  onImageClick,
+  onFileClick,
+  className = ''
+}: MarkdownContentProps) {
   const safeContent = useMemo(() => sanitizeOutputText(content || ''), [content]);
 
   const components = useMemo(
