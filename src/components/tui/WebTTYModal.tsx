@@ -3,15 +3,19 @@ import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import 'xterm/css/xterm.css';
 
-const VIRTUAL_KEYS: Array<{ label: string; input: string }> = [
-  { label: 'Esc', input: '\x1b' },
-  { label: 'Tab', input: '\t' },
-  { label: 'Ctrl+C', input: '\x03' },
-  { label: '↑', input: '\x1b[A' },
-  { label: '↓', input: '\x1b[B' },
-  { label: '←', input: '\x1b[D' },
-  { label: '→', input: '\x1b[C' },
-  { label: 'Enter', input: '\r' }
+const VIRTUAL_KEYS: Array<{ label: string; input: string; minW?: number }> = [
+  { label: 'Esc',   input: '\x1b',     minW: 58 },
+  { label: 'Tab',   input: '\t',        minW: 58 },
+  { label: 'Ctrl+C',input: '\x03',      minW: 58 },
+  { label: 'Ctrl+D',input: '\x04',      minW: 58 },
+  { label: 'Ctrl+W',input: '\x17',      minW: 58 },
+  { label: '↑',     input: '\x1b[A',   minW: 44 },
+  { label: '↓',     input: '\x1b[B',   minW: 44 },
+  { label: '←',     input: '\x1b[D',   minW: 44 },
+  { label: '→',     input: '\x1b[C',   minW: 44 },
+  { label: 'PgUp',  input: '\x1b[5~', minW: 58 },
+  { label: 'PgDn',  input: '\x1b[6~', minW: 58 },
+  { label: 'Enter',  input: '\r',       minW: 58 },
 ];
 
 export function WebTTYModal({
@@ -80,7 +84,7 @@ export function WebTTYModal({
       <div ref={ref} className="flex-1" />
       {/* Mobile virtual keys bar — essential for touch devices since
           soft-keyboards lack Esc / Tab / arrows / Ctrl+C. */}
-      <div className="border-t border-border px-2 py-2 flex gap-1 overflow-x-auto md:hidden">
+      <div className="border-t border-border px-2 py-2 pb-safe flex gap-1 overflow-x-auto md:hidden">
         {VIRTUAL_KEYS.map((k) => (
           <button
             key={k.label}
@@ -89,7 +93,8 @@ export function WebTTYModal({
               sendKey(k.input);
             }}
             onClick={() => sendKey(k.input)}
-            className="shrink-0 px-3 py-2 text-xs font-mono border border-border rounded bg-secondary text-secondary-foreground active:opacity-60"
+            className={`shrink-0 h-[44px] text-xs font-mono border border-border rounded bg-secondary text-secondary-foreground active:opacity-60 ${k.minW ? '' : ''}`}
+            style={{ minWidth: k.minW ?? 58 }}
           >
             {k.label}
           </button>
