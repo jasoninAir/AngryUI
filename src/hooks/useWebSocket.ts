@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { WSMessage } from '@/lib/types';
 import { getStoredToken } from '@/lib/auth';
+import { useBatterySaver } from './useBatterySaver';
 
 const INITIAL_DELAY_MS = 1000;
 const MAX_DELAY_MS = 30000;
@@ -12,6 +13,7 @@ export function getBackoffDelay(attempt: number): number {
 }
 
 export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) {
+  const isVisible = useBatterySaver();
   const wsRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
@@ -47,6 +49,15 @@ export function useWebSocket(url: string, onMessage?: (msg: WSMessage) => void) 
 
     ws.onclose = () => {
       setReadyState(WebSocket.CLOSED);
+      if (!isVisible) {
+        const handleVisible = () => {
+          document.removeEventListener('visibilitychange', handleVisible);
+          reconnectAttemptRef.current = 0;
+          connect();
+        };
+        document.addEventListener('visibilitychange', handleVisible);
+        return;
+      }
       const delay = getBackoffDelay(reconnectAttemptRef.current);
       reconnectAttemptRef.current += 1;
       reconnectTimeoutRef.current = setTimeout(connect, delay);
