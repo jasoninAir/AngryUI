@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   AlertCircle,
   ShieldAlert,
-  Code2
+  Code2,
+  FileCode
 } from 'lucide-react';
 import { resolveMediaUrl } from './MessageItem';
 import { sanitizeOutputText } from '@/lib/textSanitizer';
@@ -19,6 +20,7 @@ import { sanitizeOutputText } from '@/lib/textSanitizer';
 interface MarkdownContentProps {
   content: string;
   onImageClick?: (url: string) => void;
+  onFileClick?: (path: string, startLine?: number, endLine?: number) => void;
   className?: string;
 }
 
@@ -306,6 +308,39 @@ export function MarkdownContent({ content, onImageClick, className = '' }: Markd
 
       // Links
       a({ href, children }: any) {
+        if (href && onFileClick) {
+          const cleanHref = href.trim();
+          if (cleanHref.startsWith('file://') || cleanHref.startsWith('/')) {
+            // Parse line range from hash e.g. #L10-L30 or #L15
+            let targetPath = cleanHref.replace(/^file:\/\//, '');
+            let startLine: number | undefined;
+            let endLine: number | undefined;
+
+            const hashIndex = targetPath.indexOf('#');
+            if (hashIndex !== -1) {
+              const hash = targetPath.slice(hashIndex + 1);
+              targetPath = targetPath.slice(0, hashIndex);
+              const lineMatch = /L(\d+)(?:-L?(\d+))?/i.exec(hash);
+              if (lineMatch) {
+                startLine = parseInt(lineMatch[1], 10);
+                endLine = lineMatch[2] ? parseInt(lineMatch[2], 10) : startLine;
+              }
+            }
+
+            return (
+              <button
+                type="button"
+                onClick={() => onFileClick(targetPath, startLine, endLine)}
+                className="text-primary hover:underline font-medium inline-flex items-center gap-1 transition-colors cursor-pointer bg-primary/10 hover:bg-primary/20 px-1.5 py-0.5 rounded text-xs align-baseline"
+                title={`Inspect file: ${targetPath}${startLine ? ` (Line ${startLine}${endLine ? `-${endLine}` : ''})` : ''}`}
+              >
+                <FileCode className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>{children}</span>
+              </button>
+            );
+          }
+        }
+
         return (
           <a
             href={href}
@@ -319,7 +354,7 @@ export function MarkdownContent({ content, onImageClick, className = '' }: Markd
         );
       }
     }),
-    [onImageClick]
+    [onImageClick, onFileClick]
   );
 
   return (

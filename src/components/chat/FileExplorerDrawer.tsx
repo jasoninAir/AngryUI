@@ -16,7 +16,8 @@ import {
   RefreshCw,
   X,
   Search,
-  FolderTree
+  FolderTree,
+  Eye
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { authFetch } from '@/lib/api';
@@ -38,6 +39,7 @@ interface TreeNodeProps {
   searchFilter: string;
   onCopyPath: (relPath: string) => void;
   onInsertPath?: (relPath: string) => void;
+  onPreviewFile?: (filePath: string) => void;
   copiedPath: string | null;
 }
 
@@ -158,7 +160,13 @@ function TreeNode({
           entry.isDirectory ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'
         }`}
         style={{ paddingLeft: `${Math.max(8, level * 16 + 8)}px` }}
-        onClick={handleToggle}
+        onClick={() => {
+          if (entry.isDirectory) {
+            handleToggle();
+          } else if (onPreviewFile) {
+            onPreviewFile(entry.path);
+          }
+        }}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1 py-0.5">
           {entry.isDirectory ? (
@@ -190,6 +198,21 @@ function TreeNode({
                 <span className="text-[10px] text-muted-foreground/70 font-mono hidden sm:inline mr-1">
                   {formatFileSize(entry.size)}
                 </span>
+              )}
+
+              {/* Preview file button */}
+              {onPreviewFile && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPreviewFile(entry.path);
+                  }}
+                  title="Preview code / text"
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
               )}
 
               {/* Insert @path into chat input */}
@@ -275,6 +298,7 @@ function TreeNode({
                 searchFilter={searchFilter}
                 onCopyPath={onCopyPath}
                 onInsertPath={onInsertPath}
+                onPreviewFile={onPreviewFile}
                 copiedPath={copiedPath}
               />
             ))}
@@ -288,12 +312,14 @@ export function FileExplorerDrawer({
   workspace,
   isOpen,
   onClose,
-  onInsertPath
+  onInsertPath,
+  onPreviewFile
 }: {
   workspace?: string;
   isOpen: boolean;
   onClose: () => void;
   onInsertPath?: (relPath: string) => void;
+  onPreviewFile?: (filePath: string) => void;
 }) {
   const { t } = useLanguage();
   const [entries, setEntries] = useState<WorkspaceFileEntry[]>([]);
@@ -423,6 +449,7 @@ export function FileExplorerDrawer({
               searchFilter={search}
               onCopyPath={handleCopyPath}
               onInsertPath={onInsertPath}
+              onPreviewFile={onPreviewFile}
               copiedPath={copiedPath}
             />
           ))

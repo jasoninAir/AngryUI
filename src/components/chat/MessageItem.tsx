@@ -130,7 +130,13 @@ export function parseAuthorizationMessage(text: string = ''): AuthMessageInfo | 
   return null;
 }
 
-export function MessageItem({ msg }: { msg: Message }) {
+export function MessageItem({
+  msg,
+  onFileClick
+}: {
+  msg: Message;
+  onFileClick?: (path: string, startLine?: number, endLine?: number) => void;
+}) {
   const { t } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -182,12 +188,10 @@ export function MessageItem({ msg }: { msg: Message }) {
                     </span>
                   </div>
                 ) : (
-                  <a
+                  <button
                     key={i}
-                    href={att.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 bg-primary-foreground/15 hover:bg-primary-foreground/25 border border-primary-foreground/30 px-2.5 py-1.5 rounded-lg text-xs transition-colors shadow-2xs"
+                    onClick={() => onFileClick?.(att.path)}
+                    className="flex items-center gap-1.5 bg-primary-foreground/15 hover:bg-primary-foreground/25 border border-primary-foreground/30 px-2.5 py-1.5 rounded-lg text-xs transition-colors shadow-2xs text-left"
                   >
                     {att.filename.endsWith('.csv') || att.filename.endsWith('.xlsx') ? (
                       <FileSpreadsheet className="w-4 h-4 shrink-0" />
@@ -198,7 +202,7 @@ export function MessageItem({ msg }: { msg: Message }) {
                     )}
                     <span className="max-w-[160px] truncate font-medium">{att.filename}</span>
                     <ExternalLink className="w-3 h-3 opacity-70 shrink-0" />
-                  </a>
+                  </button>
                 )
               )}
             </div>
@@ -247,6 +251,7 @@ export function MessageItem({ msg }: { msg: Message }) {
         <MarkdownContent
           content={msg.text || ''}
           onImageClick={(url) => setSelectedImage(url)}
+          onFileClick={onFileClick}
         />
       </div>
 

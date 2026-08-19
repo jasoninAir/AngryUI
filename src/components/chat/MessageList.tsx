@@ -5,10 +5,12 @@ import { Loader2, ArrowDown } from 'lucide-react';
 
 export function MessageList({
   messages,
-  loading = false
+  loading = false,
+  onFileClick
 }: {
   messages: any[];
   loading?: boolean;
+  onFileClick?: (path: string, startLine?: number, endLine?: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -83,7 +85,7 @@ export function MessageList({
         className="h-full overflow-y-auto p-4 space-y-4 overscroll-contain"
       >
         {messages.map((m) => (
-          <MessageItem key={m.id} msg={m} />
+          <MessageItem key={m.id} msg={m} onFileClick={onFileClick} />
         ))}
         <div ref={messagesEndRef} className="h-1 shrink-0" />
       </div>

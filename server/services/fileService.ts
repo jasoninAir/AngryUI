@@ -68,3 +68,91 @@ export function listWorkspaceFiles(workspaceRoot: string, subDir?: string): Work
 
   return result;
 }
+
+export interface FileContentResult {
+  path: string;
+  name: string;
+  extension: string;
+  content: string;
+  size: number;
+  isBinary: boolean;
+  truncated: boolean;
+  totalLines: number;
+}
+
+const MAX_PREVIEW_BYTES = 2 * 1024 * 1024; // 2MB
+
+export function readWorkspaceFile(filePath: string, workspaceRoot?: string): FileContentResult {
+  let cleanPath = filePath.startsWith('file://') ? filePath.replace(/^file:\/\//, '') : filePath;
+  cleanPath = path.resolve(cleanPath.trim());
+
+  if (!fs.existsSync(cleanPath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+
+  const stat = fs.statSync(cleanPath);
+  if (stat.isDirectory()) {
+    throw new Error(`Path is a directory: ${filePath}`);
+  }
+
+  const ext = path.extname(cleanPath).toLowerCase();
+  const name = path.basename(cleanPath);
+
+  // Common binary file extensions
+  const binaryExts = new Set([
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.pdf', '.zip', '.tar', '.gz',
+    '.exe', '.bin', '.dll', '.so', '.dylib', '.sqlite', '.db', '.woff', '.woff2', '.ttf',
+    '.mp4', '.mp3', '.wav', '.mov', '.avi', '.7z', '.bz2', '.iso'
+  ]);
+
+  if (binaryExts.has(ext)) {
+    return {
+      path: cleanPath,
+      name,
+      extension: ext,
+      content: '',
+      size: stat.size,
+      isBinary: true,
+      truncated: false,
+      totalLines: 0
+    };
+  }
+
+  const buf = fs.readFileSync(cleanPath);
+  let isBinary = false;
+  for (let i = 0; i < Math.min(buf.length, 512); i++) {
+    if (buf[i] === 0) {
+      isBinary = true;
+      break;
+    }
+  }
+
+  if (isBinary) {
+    return {
+      path: cleanPath,
+      name,
+      extension: ext,
+      content: '',
+      size: stat.size,
+      isBinary: true,
+      truncated: false,
+      totalLines: 0
+    };
+  }
+
+  const truncated = buf.length > MAX_PREVIEW_BYTES;
+  const contentToDecode = truncated ? buf.subarray(0, MAX_PREVIEW_BYTES) : buf;
+  const content = contentToDecode.toString('utf-8');
+  const totalLines = content.split('\n').length;
+
+  return {
+    path: cleanPath,
+    name,
+    extension: ext,
+    content,
+    size: stat.size,
+    isBinary: false,
+    truncated,
+    totalLines
+  };
+}

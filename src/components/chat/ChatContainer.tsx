@@ -12,6 +12,7 @@ import { ChatInput, ChatInputHandle } from './ChatInput';
 import { FileExplorerDrawer } from './FileExplorerDrawer';
 import { QuotaModal } from '../quota/QuotaModal';
 import { WhitelistModal } from '../whitelist/WhitelistModal';
+import { CodePreviewModal } from '../common/CodePreviewModal';
 import {
   Folder,
   History,
@@ -115,6 +116,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const [showTty, setShowTty] = useState(false);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
   const [showWhitelistModal, setShowWhitelistModal] = useState(false);
+  const [inspectingFile, setInspectingFile] = useState<{ path: string; startLine?: number; endLine?: number } | null>(null);
 
   // Auto-fill workspace from database if not specified in searchParams
   useEffect(() => {
@@ -324,7 +326,12 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
           {/* Messages Scroll Area */}
           <div className="flex-1 min-h-0 overflow-hidden relative">
-            <MessageList key={conversationId} messages={messages} loading={historyLoading} />
+            <MessageList
+              key={conversationId}
+              messages={messages}
+              loading={historyLoading}
+              onFileClick={(path, startLine, endLine) => setInspectingFile({ path, startLine, endLine })}
+            />
           </div>
 
           {/* Interactive Prompt Banner (if needed) */}
@@ -482,6 +489,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           isOpen={showFileExplorer}
           onClose={() => setShowFileExplorer(false)}
           onInsertPath={handleInsertPath}
+          onPreviewFile={(filePath) => setInspectingFile({ path: filePath })}
         />
       </div>
 
@@ -503,6 +511,17 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
       {/* Whitelist Rules Modal */}
       <WhitelistModal isOpen={showWhitelistModal} onClose={() => setShowWhitelistModal(false)} />
+
+      {/* Code & Content Inspector Modal (P1-1) */}
+      <CodePreviewModal
+        isOpen={Boolean(inspectingFile)}
+        filePath={inspectingFile?.path || ''}
+        startLine={inspectingFile?.startLine}
+        endLine={inspectingFile?.endLine}
+        workspace={workspace}
+        onClose={() => setInspectingFile(null)}
+        onInsertReference={(refText) => chatInputRef.current?.insertSnippet(refText)}
+      />
     </div>
   );
 }

@@ -153,7 +153,20 @@ export const translations = {
     // WebTTY Terminal
     terminalTitle: 'Antigravity Interactive Terminal',
     closeTerminal: 'Close Terminal',
-    terminalHelp: 'Use this terminal for interactive prompts, confirmation, and raw terminal commands.'
+    terminalHelp: 'Use this terminal for interactive prompts, confirmation, and raw terminal commands.',
+
+    // Code & Content Inspector
+    codeInspectorTitle: 'Code & Document Inspector',
+    copyCode: 'Copy Code',
+    codeCopied: 'Copied!',
+    insertReference: 'Insert Reference',
+    downloadFile: 'Download',
+    loadingFile: 'Loading file...',
+    binaryFileWarning: 'Binary file preview not supported',
+    linesCount: 'lines',
+    fileTruncatedWarning: 'File truncated (showing first 2MB)',
+    selectedRange: 'Selected:',
+    clearSelection: 'Clear'
   },
 
   'zh-CN': {
@@ -292,7 +305,20 @@ export const translations = {
     // WebTTY Terminal
     terminalTitle: 'Antigravity 交互式终端',
     closeTerminal: '关闭终端',
-    terminalHelp: '当智能体需要复杂的命令行交互或授权确认时，可在此终端中直接操作。'
+    terminalHelp: '当智能体需要复杂的命令行交互或授权确认时，可在此终端中直接操作。',
+
+    // Code & Content Inspector
+    codeInspectorTitle: '代码与文档审查器',
+    copyCode: '复制代码',
+    codeCopied: '已复制！',
+    insertReference: '插入引用',
+    downloadFile: '下载文件',
+    loadingFile: '正在加载文件内容...',
+    binaryFileWarning: '暂不支持预览二进制文件',
+    linesCount: '行',
+    fileTruncatedWarning: '文件过大，已截断展示前 2MB 内容',
+    selectedRange: '已选行号：',
+    clearSelection: '清除选择'
   },
 
   'zh-TW': {
@@ -431,7 +457,20 @@ export const translations = {
     // WebTTY Terminal
     terminalTitle: 'Antigravity 互動式終端機',
     closeTerminal: '關閉終端機',
-    terminalHelp: '當智能體需要複雜的命令列互動或授權確認時，可在此終端機中直接操作。'
+    terminalHelp: '當智能體需要複雜的命令列互動或授權確認時，可在此終端機中直接操作。',
+
+    // Code & Content Inspector
+    codeInspectorTitle: '程式碼與文件檢視器',
+    copyCode: '複製程式碼',
+    codeCopied: '已複製！',
+    insertReference: '插入引用',
+    downloadFile: '下載檔案',
+    loadingFile: '正在載入檔案內容...',
+    binaryFileWarning: '暫不支援預覽二進位檔案',
+    linesCount: '行',
+    fileTruncatedWarning: '檔案過大，已截斷展示前 2MB 內容',
+    selectedRange: '已選行號：',
+    clearSelection: '清除選擇'
   },
 
   ja: {
@@ -570,7 +609,20 @@ export const translations = {
     // WebTTY Terminal
     terminalTitle: 'Antigravity インタラクティブターミナル',
     closeTerminal: 'ターミナルを閉じる',
-    terminalHelp: '複雑なコマンドライン操作や確認が必要な場合は、このターミナルで直接操作できます。'
+    terminalHelp: '複雑なコマンドライン操作や確認が必要な場合は、このターミナルで直接操作できます。',
+
+    // Code & Content Inspector
+    codeInspectorTitle: 'コード＆ドキュメントインスペクター',
+    copyCode: 'コードをコピー',
+    codeCopied: 'コピー完了！',
+    insertReference: '参照を挿入',
+    downloadFile: 'ダウンロード',
+    loadingFile: 'ファイルを読み込み中...',
+    binaryFileWarning: 'バイナリファイルのプレビューには対応していません',
+    linesCount: '行',
+    fileTruncatedWarning: 'ファイルサイズが大きいため先頭 2MB を表示しています',
+    selectedRange: '選択中の行：',
+    clearSelection: '選択解除'
   },
 
   es: {
@@ -709,7 +761,20 @@ export const translations = {
     // WebTTY Terminal
     terminalTitle: 'Terminal Interactiva de Antigravity',
     closeTerminal: 'Cerrar Terminal',
-    terminalHelp: 'Utilice esta terminal para solicitudes interactivas, confirmaciones o comandos directos.'
+    terminalHelp: 'Utilice esta terminal para solicitudes interactivas, confirmaciones o comandos directos.',
+
+    // Code & Content Inspector
+    codeInspectorTitle: 'Inspector de Código y Documentos',
+    copyCode: 'Copiar Código',
+    codeCopied: '¡Copiado!',
+    insertReference: 'Insertar Referencia',
+    downloadFile: 'Descargar',
+    loadingFile: 'Cargando archivo...',
+    binaryFileWarning: 'Vista previa no disponible para archivos binarios',
+    linesCount: 'líneas',
+    fileTruncatedWarning: 'Archivo truncado (mostrando los primeros 2MB)',
+    selectedRange: 'Líneas seleccionadas:',
+    clearSelection: 'Limpiar'
   }
 };
 

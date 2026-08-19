@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ConversationIndex } from '../db/conversationIndex';
 import { getConversationHistory } from '../services/historyService';
 import { conversationHub } from '../ws/conversationHub';
-import { listWorkspaceFiles } from '../services/fileService';
+import { listWorkspaceFiles, readWorkspaceFile } from '../services/fileService';
 
 export function createProjectsRouter(index: ConversationIndex): Router {
   const router = Router();
@@ -16,6 +16,21 @@ export function createProjectsRouter(index: ConversationIndex): Router {
       res.json({ workspace, subDir: subDir || '', entries });
     } catch (e: any) {
       res.status(400).json({ error: e.message || 'Failed to list files' });
+    }
+  });
+
+  // GET /api/workspace/file/content?path=...&workspace=...
+  router.get('/workspace/file/content', (req, res) => {
+    const filePath = req.query.path as string;
+    const workspace = req.query.workspace as string | undefined;
+    if (!filePath) {
+      return res.status(400).json({ error: 'Missing path parameter' });
+    }
+    try {
+      const data = readWorkspaceFile(filePath, workspace);
+      res.json(data);
+    } catch (e: any) {
+      res.status(404).json({ error: e.message || 'Failed to read file' });
     }
   });
 
