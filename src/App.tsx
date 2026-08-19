@@ -17,8 +17,8 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
         <h1 className="text-xl font-bold">AngryUI</h1>
         <input type="password" value={val} onChange={e => setVal(e.target.value)}
           placeholder="Enter access token" className="border rounded px-3 py-2" autoFocus />
-        <button type="submit" className="bg-primary text-primary-foreground rounded px-4 py-2">
-          Connect
+        <button type="submit" disabled={!val.trim()} className="bg-primary text-primary-foreground rounded px-4 py-2 disabled:opacity-50 cursor-not-allowed">
+          {val.trim() ? 'Connect' : 'Enter token above'}
         </button>
       </form>
     </div>
