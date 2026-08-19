@@ -4,18 +4,23 @@ import { FitAddon } from '@xterm/addon-fit';
 import 'xterm/css/xterm.css';
 
 const VIRTUAL_KEYS: Array<{ label: string; input: string; minW?: number }> = [
-  { label: 'Esc',   input: '\x1b',     minW: 58 },
-  { label: 'Tab',   input: '\t',        minW: 58 },
-  { label: 'Ctrl+C',input: '\x03',      minW: 58 },
-  { label: 'Ctrl+D',input: '\x04',      minW: 58 },
-  { label: 'Ctrl+W',input: '\x17',      minW: 58 },
-  { label: '↑',     input: '\x1b[A',   minW: 44 },
-  { label: '↓',     input: '\x1b[B',   minW: 44 },
-  { label: '←',     input: '\x1b[D',   minW: 44 },
-  { label: '→',     input: '\x1b[C',   minW: 44 },
-  { label: 'PgUp',  input: '\x1b[5~', minW: 58 },
-  { label: 'PgDn',  input: '\x1b[6~', minW: 58 },
-  { label: 'Enter',  input: '\r',       minW: 58 },
+  { label: 'Esc',    input: '\x1b',     minW: 48 },
+  { label: 'Tab',    input: '\t',        minW: 48 },
+  { label: 'Ctrl+C', input: '\x03',      minW: 56 },
+  { label: 'Ctrl+D', input: '\x04',      minW: 56 },
+  { label: 'Ctrl+L', input: '\x0c',      minW: 56 },
+  { label: 'Ctrl+Z', input: '\x1a',      minW: 56 },
+  { label: 'Ctrl+W', input: '\x17',      minW: 56 },
+  { label: '↑',      input: '\x1b[A',   minW: 44 },
+  { label: '↓',      input: '\x1b[B',   minW: 44 },
+  { label: '←',      input: '\x1b[D',   minW: 44 },
+  { label: '→',      input: '\x1b[C',   minW: 44 },
+  { label: 'Home',   input: '\x1b[H',   minW: 50 },
+  { label: 'End',    input: '\x1b[F',   minW: 50 },
+  { label: 'PgUp',   input: '\x1b[5~', minW: 54 },
+  { label: 'PgDn',   input: '\x1b[6~', minW: 54 },
+  { label: '⌫ BS',   input: '\x7f',     minW: 52 },
+  { label: 'Enter',  input: '\r',       minW: 56 },
 ];
 
 export function WebTTYModal({
@@ -78,18 +83,25 @@ export function WebTTYModal({
       role="dialog"
       aria-modal="true"
       aria-label={`WebTTY terminal — ${conversationId.slice(0, 8)}`}
-      className="fixed inset-0 z-50 bg-background flex flex-col"
+      className="fixed inset-0 z-50 bg-background flex flex-col font-sans select-none"
     >
-      <div className="border-b border-border px-4 py-2 flex items-center justify-between">
-        <span className="font-mono text-sm">WebTTY — {conversationId.slice(0, 8)}</span>
-        <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">
-          Exit TTY
+      <div className="border-b border-border px-3 sm:px-4 py-2 flex items-center justify-between bg-card/60 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-mono text-xs sm:text-sm font-medium">WebTTY — {conversationId.slice(0, 8)}</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-xs text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-md border border-border hover:bg-accent transition-colors cursor-pointer"
+        >
+          Exit TTY (ESC)
         </button>
       </div>
-      <div ref={ref} className="flex-1" />
-      {/* Mobile virtual keys bar — essential for touch devices since
-          soft-keyboards lack Esc / Tab / arrows / Ctrl+C. */}
-      <div className="border-t border-border px-2 py-2 pb-safe flex gap-1 overflow-x-auto md:hidden">
+
+      <div ref={ref} className="flex-1 bg-[#1e1e1e]" />
+
+      {/* Mobile virtual keys bar — 44pt touch standard */}
+      <div className="border-t border-border bg-card/80 px-2 py-2 pb-safe flex gap-1.5 overflow-x-auto md:hidden no-scrollbar shrink-0 shadow-lg">
         {VIRTUAL_KEYS.map((k) => (
           <button
             key={k.label}
@@ -98,8 +110,8 @@ export function WebTTYModal({
               sendKey(k.input);
             }}
             onClick={() => sendKey(k.input)}
-            className={`shrink-0 h-[44px] text-xs font-mono border border-border rounded bg-secondary text-secondary-foreground active:opacity-60 ${k.minW ? '' : ''}`}
-            style={{ minWidth: k.minW ?? 58 }}
+            className="shrink-0 h-[44px] text-xs font-mono font-semibold border border-border rounded-xl bg-secondary text-secondary-foreground hover:bg-accent active:scale-90 active:bg-primary/20 active:border-primary/50 transition-all flex items-center justify-center cursor-pointer shadow-xs"
+            style={{ minWidth: k.minW ?? 52 }}
           >
             {k.label}
           </button>

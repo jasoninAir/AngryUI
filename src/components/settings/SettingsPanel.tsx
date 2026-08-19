@@ -1,5 +1,6 @@
 import { SecurityPanel } from './SecurityPanel';
 import { SoundPanel } from './SoundPanel';
+import { PwaInstallPanel } from './PwaInstallPanel';
 import { useLanguage } from '@/context/LanguageContext';
 
 export function SettingsPanel() {
@@ -13,6 +14,7 @@ export function SettingsPanel() {
       </div>
       <SecurityPanel />
       <SoundPanel />
+      <PwaInstallPanel />
     </div>
   );
 }

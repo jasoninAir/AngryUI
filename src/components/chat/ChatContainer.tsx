@@ -10,9 +10,11 @@ import { findDangerMatches } from '@/lib/dangerCommands';
 import { MessageList } from './MessageList';
 import { ChatInput, ChatInputHandle } from './ChatInput';
 import { FileExplorerDrawer } from './FileExplorerDrawer';
+import { PermissionCard } from './PermissionCard';
 import { QuotaModal } from '../quota/QuotaModal';
 import { WhitelistModal } from '../whitelist/WhitelistModal';
 import { CodePreviewModal } from '../common/CodePreviewModal';
+import { addTemporaryRule, isTemporarilyAllowed } from '@/lib/tempWhitelist';
 import {
   Folder,
   History,
@@ -147,6 +149,26 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     clearPermissionPrompt();
     send('允许执行本次命令，请继续执行下一步任务。', model, effort, workspace, true);
   };
+
+  const handleAllowTemporaryAndContinue = () => {
+    if (!permissionPrompt?.command) {
+      handleAllowOnceAndContinue();
+      return;
+    }
+    const cmd = permissionPrompt.command;
+    addTemporaryRule(cmd, 10 * 60 * 1000);
+    clearPermissionPrompt();
+    send(`已临时允许命令 ${cmd} (10分钟内免确认)，请继续执行任务。`, model, effort, workspace, true);
+  };
+
+  // Auto-approve command if matching active 10-minute temporary memory whitelist
+  useEffect(() => {
+    if (permissionPrompt?.command && isTemporarilyAllowed(permissionPrompt.command)) {
+      const cmd = permissionPrompt.command;
+      clearPermissionPrompt();
+      send(`命令 ${cmd} 命中10分钟临时白名单，已自动放行执行。`, model, effort, workspace, true);
+    }
+  }, [permissionPrompt, workspace, model, effort, clearPermissionPrompt, send]);
 
   const handleAddToAllowlistAndContinue = async () => {
     if (!permissionPrompt?.command) {
@@ -355,82 +377,16 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             </div>
           )}
 
-          {/* Dynamic Authorization Bar right above input */}
+          {/* Dynamic Authorization Card right above input */}
           {permissionPrompt && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mx-3 mb-2 flex flex-col gap-2.5 shadow-sm text-xs shrink-0 animate-in fade-in duration-200">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-medium">
-                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
-                  <span>{t('permissionRequired')}</span>
-                </div>
-                <button
-                  onClick={clearPermissionPrompt}
-                  className="text-muted-foreground hover:text-foreground text-xs p-0.5 rounded hover:bg-muted cursor-pointer"
-                  title={t('ignore')}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {permissionPrompt.command && (
-                <div className="bg-background/90 border border-border/80 rounded-md p-2 font-mono text-[11px] text-foreground break-all select-all">
-                  <span className="text-muted-foreground mr-1.5">$</span>
-                  {permissionPrompt.command}
-                </div>
-              )}
-              {permissionPrompt.command && (() => {
-                const dangers = findDangerMatches(permissionPrompt.command);
-                return dangers.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {dangers.map(d => (
-                      <span
-                        key={d.label}
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                          d.severity === 'high' ? 'bg-red-500/20 text-red-600 dark:text-red-400' : 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
-                        }`}
-                      >
-                        ⚠ {d.label}
-                      </span>
-                    ))}
-                  </div>
-                ) : null;
-              })()}
-
-              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-500/20">
-                <button
-                  onClick={handleAllowOnceAndContinue}
-                  className="px-3 py-1.5 bg-amber-500 text-white rounded-md font-medium hover:bg-amber-600 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{t('allowOnce')}</span>
-                </button>
-
-                {permissionPrompt.command && (
-                  <button
-                    onClick={handleAddToAllowlistAndContinue}
-                    className="px-3 py-1.5 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>{t('addToWhitelist')}</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setShowTty(true)}
-                  className="px-2.5 py-1.5 border border-border bg-background rounded-md text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Terminal className="w-3.5 h-3.5" />
-                  <span>{t('takeoverTTY')}</span>
-                </button>
-
-                <button
-                  onClick={clearPermissionPrompt}
-                  className="ml-auto px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors cursor-pointer"
-                >
-                  {t('ignore')}
-                </button>
-              </div>
-            </div>
+            <PermissionCard
+              prompt={permissionPrompt}
+              onAllowOnce={handleAllowOnceAndContinue}
+              onAllowTemporary={handleAllowTemporaryAndContinue}
+              onAddToWhitelist={handleAddToAllowlistAndContinue}
+              onTakeoverTTY={() => setShowTty(true)}
+              onDeny={clearPermissionPrompt}
+            />
           )}
 
           {/* Permission Mode Toggle Bar (Positioned right above textarea at bottom) */}

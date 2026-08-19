@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
 import { fetchConversationHistory } from '@/lib/api';
 import { soundManager } from '@/lib/sound';
+import { notificationManager } from '@/lib/notificationManager';
 import { generateUUID } from '@/lib/uuid';
 import type { AgyEventClient, WSMessage } from '@/lib/types';
 
@@ -187,6 +188,7 @@ export function useConversation(conversationId: string) {
       const nextState = msg.payload?.state || 'IDLE';
       if (prevStatusRef.current === 'RUNNING' && nextState === 'IDLE') {
         soundManager.playTaskComplete();
+        notificationManager.notifyTaskComplete();
       }
       if (nextState === 'IDLE') {
         dispatch({ type: 'interactive_prompt', active: false });
@@ -202,6 +204,7 @@ export function useConversation(conversationId: string) {
       const ev = msg.payload;
       if (ev?.type === 'permission_required') {
         soundManager.playAttentionRequired();
+        notificationManager.notifyPermissionRequired(ev.command || ev.tool);
         dispatch({
           type: 'permission_prompt',
           info: {
@@ -219,6 +222,7 @@ export function useConversation(conversationId: string) {
       });
     } else if (msg.type === 'chat:interactive_prompt') {
       soundManager.playAttentionRequired();
+      notificationManager.notifyPermissionRequired(msg.payload?.command || msg.payload?.tool);
       if (msg.payload?.command || msg.payload?.tool) {
         dispatch({
           type: 'permission_prompt',

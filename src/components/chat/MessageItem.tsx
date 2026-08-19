@@ -93,7 +93,7 @@ function parseUserAttachments(rawText: string = ''): { attachments: ParsedAttach
 
 interface AuthMessageInfo {
   isAuth: boolean;
-  type: 'once' | 'whitelist';
+  type: 'once' | 'whitelist' | 'temporary';
   command?: string;
 }
 
@@ -101,7 +101,18 @@ export function parseAuthorizationMessage(text: string = ''): AuthMessageInfo | 
   const clean = text.trim();
   if (!clean) return null;
 
-  // 1. Allow once
+  // 1. Temporary 10 min whitelist
+  const tempMatch =
+    clean.match(/已临时允许(?:命令\s*)?(.*?)(?:\s*\(10分钟|\s*命中10分钟)/) ||
+    clean.match(/temporarily allowed\s*(.*?)\s*for 10 min/i) ||
+    clean.match(/10分間一時的に許可/i);
+
+  if (tempMatch || clean.includes('临时允许') || clean.includes('10分钟临时白名单') || clean.includes('temporarily allowed')) {
+    const cmd = tempMatch ? tempMatch[1]?.trim() : undefined;
+    return { isAuth: true, type: 'temporary', command: cmd };
+  }
+
+  // 2. Allow once
   if (
     clean.includes('允许执行本次命令') ||
     clean.includes('允许执行当前命令') ||
@@ -115,7 +126,7 @@ export function parseAuthorizationMessage(text: string = ''): AuthMessageInfo | 
     return { isAuth: true, type: 'once' };
   }
 
-  // 2. Add to whitelist
+  // 3. Add to permanent whitelist
   const whitelistMatch =
     clean.match(/已将命令\s*(.*?)\s*加入白名单/) ||
     clean.match(/added command\s*(.*?)\s*to (?:permission )?whitelist/i) ||
@@ -147,7 +158,11 @@ export function MessageItem({
     // Render authorization confirmations as a centered capsule badge
     if (authInfo) {
       const label =
-        authInfo.type === 'whitelist'
+        authInfo.type === 'temporary'
+          ? authInfo.command
+            ? `${t('authApprovedTemporary')}: ${authInfo.command}`
+            : t('authApprovedTemporary')
+          : authInfo.type === 'whitelist'
           ? authInfo.command
             ? `${t('authAddedToWhitelist')}: ${authInfo.command}`
             : t('authAddedToWhitelist')
@@ -155,8 +170,14 @@ export function MessageItem({
 
       return (
         <div className="flex justify-center items-center my-3 w-full animate-in fade-in zoom-in-95 duration-200 select-none">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium shadow-2xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium shadow-2xs ${
+            authInfo.type === 'temporary'
+              ? 'bg-sky-500/10 dark:bg-sky-950/40 border-sky-500/30 text-sky-700 dark:text-sky-300'
+              : 'bg-emerald-500/10 dark:bg-emerald-950/40 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+          }`}>
+            <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${
+              authInfo.type === 'temporary' ? 'text-sky-600 dark:text-sky-400' : 'text-emerald-600 dark:text-emerald-400'
+            }`} />
             <span className="truncate max-w-md font-sans">{label}</span>
           </div>
         </div>
