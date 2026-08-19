@@ -67,14 +67,14 @@ export function Sidebar() {
     <nav
       role="navigation"
       aria-label="Main navigation"
-      className={`h-screen bg-card border-r border-border flex flex-col justify-between select-none ${
+      className={`h-full h-[100dvh] max-h-[100dvh] bg-card border-r border-border flex flex-col justify-between select-none ${
         isMobile
           ? 'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] shadow-2xl animate-in slide-in-from-left duration-200'
           : 'w-64 shrink-0 transition-all duration-200'
       }`}
     >
       {/* Top Header */}
-      <div className="p-3 border-b border-border flex flex-col gap-1.5">
+      <div className="p-3 border-b border-border flex flex-col gap-1.5 shrink-0">
         <Link to="/" className="flex items-center gap-2 min-w-0 group hover:opacity-90 transition-opacity">
           <img
             src="/logo.png"
@@ -138,7 +138,7 @@ export function Sidebar() {
       </div>
 
       {/* Center: Scrollable Projects & Conversations */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
         {displayGroups.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             <p>{t('noSessionsFound')}</p>
@@ -166,8 +166,8 @@ export function Sidebar() {
       </div>
 
       {/* Bottom Footer: Left-aligned Language & Settings, Right-aligned Archive Filter */}
-      <div className="p-2 border-t border-border bg-card/40 flex items-center justify-between text-xs">
-        {/* Left Cluster: Language Selector (aA) & Settings */}
+      <div className="p-2.5 border-t border-border bg-card/90 backdrop-blur-sm flex items-center justify-between text-xs shrink-0 z-10 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {/* Left Cluster: Language Selector (aA), Theme Toggle & Settings */}
         <div className="flex items-center gap-1">
           {/* Language Switcher (aA icon with upward popover) */}
           <LanguageMenu dropUp={true} />
