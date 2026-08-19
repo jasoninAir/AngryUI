@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -12,7 +13,8 @@ import {
   AlertCircle,
   ShieldAlert,
   Code2,
-  FileCode
+  FileCode,
+  MessageSquare
 } from 'lucide-react';
 import { resolveMediaUrl } from './MessageItem';
 import { sanitizeOutputText } from '@/lib/textSanitizer';
@@ -100,6 +102,7 @@ export function MarkdownContent({
   onFileClick,
   className = ''
 }: MarkdownContentProps) {
+  const navigate = useNavigate();
   const safeContent = useMemo(() => sanitizeOutputText(content || ''), [content]);
 
   const components = useMemo(
@@ -311,46 +314,102 @@ export function MarkdownContent({
         return <hr className="my-3.5 border-t border-border/60" />;
       },
 
-      // Links
+      // Links: Smart handling for files, conversations, and web links
       a({ href, children }: any) {
-        if (href && onFileClick) {
-          const cleanHref = href.trim();
-          if (cleanHref.startsWith('file://') || cleanHref.startsWith('/')) {
-            // Parse line range from hash e.g. #L10-L30 or #L15
-            let targetPath = cleanHref.replace(/^file:\/\//, '');
-            let startLine: number | undefined;
-            let endLine: number | undefined;
+        if (!href) return <span>{children}</span>;
+        const cleanHref = href.trim();
 
-            const hashIndex = targetPath.indexOf('#');
-            if (hashIndex !== -1) {
-              const hash = targetPath.slice(hashIndex + 1);
-              targetPath = targetPath.slice(0, hashIndex);
-              const lineMatch = /L(\d+)(?:-L?(\d+))?/i.exec(hash);
-              if (lineMatch) {
-                startLine = parseInt(lineMatch[1], 10);
-                endLine = lineMatch[2] ? parseInt(lineMatch[2], 10) : startLine;
-              }
-            }
-
-            return (
-              <button
-                type="button"
-                onClick={() => onFileClick(targetPath, startLine, endLine)}
-                className="text-primary hover:underline font-medium inline-flex items-center gap-1 transition-colors cursor-pointer bg-primary/10 hover:bg-primary/20 px-1.5 py-0.5 rounded text-xs align-baseline"
-                title={`Inspect file: ${targetPath}${startLine ? ` (Line ${startLine}${endLine ? `-${endLine}` : ''})` : ''}`}
-              >
-                <FileCode className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>{children}</span>
-              </button>
-            );
-          }
+        // 1. Antigravity Conversation link: conversation://<conversationId>
+        if (cleanHref.startsWith('conversation://')) {
+          const convId = cleanHref.replace(/^conversation:\/\//, '').trim();
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(`/chat/${encodeURIComponent(convId)}`);
+              }}
+              className="text-primary hover:underline font-medium inline-flex items-center gap-1 transition-colors cursor-pointer bg-primary/10 hover:bg-primary/20 px-1.5 py-0.5 rounded text-xs align-baseline"
+              title={`Open Conversation: ${convId}`}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>{children}</span>
+            </button>
+          );
         }
 
+        // 2. Local files / artifacts / documents / paths
+        const isTrueExternalWeb =
+          /^https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.)/i.test(cleanHref) &&
+          !cleanHref.includes('/api/workspace/file');
+        const isMailOrTel = /^mailto:/i.test(cleanHref) || /^tel:/i.test(cleanHref);
+
+        const isFileOrDoc =
+          cleanHref.startsWith('file://') ||
+          cleanHref.startsWith('/') ||
+          cleanHref.startsWith('./') ||
+          cleanHref.startsWith('../') ||
+          cleanHref.includes('/api/workspace/file') ||
+          /\.(md|markdown|ts|tsx|js|jsx|py|json|yaml|yml|sh|bash|zsh|txt|log|rs|go|sql|csv|html|css|toml|env)(?:#|$)/i.test(
+            cleanHref
+          );
+
+        if (!isMailOrTel && (isFileOrDoc || !isTrueExternalWeb)) {
+          // Parse line range from hash e.g. #L10-L30 or #L15
+          let targetPath = cleanHref.replace(/^file:\/\//, '');
+
+          // If URL is full HTTP(S) workspace API URL, extract path query param
+          if (targetPath.includes('/api/workspace/file')) {
+            try {
+              const u = new URL(targetPath, 'http://localhost');
+              const p = u.searchParams.get('path');
+              if (p) targetPath = p;
+            } catch {}
+          }
+
+          let startLine: number | undefined;
+          let endLine: number | undefined;
+
+          const hashIndex = targetPath.indexOf('#');
+          if (hashIndex !== -1) {
+            const hash = targetPath.slice(hashIndex + 1);
+            targetPath = targetPath.slice(0, hashIndex);
+            const lineMatch = /L(\d+)(?:-L?(\d+))?/i.exec(hash);
+            if (lineMatch) {
+              startLine = parseInt(lineMatch[1], 10);
+              endLine = lineMatch[2] ? parseInt(lineMatch[2], 10) : startLine;
+            }
+          }
+
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onFileClick) {
+                  onFileClick(targetPath, startLine, endLine);
+                }
+              }}
+              className="text-primary hover:underline font-medium inline-flex items-center gap-1 transition-colors cursor-pointer bg-primary/10 hover:bg-primary/20 px-1.5 py-0.5 rounded text-xs align-baseline"
+              title={`Inspect document: ${targetPath}${
+                startLine ? ` (Line ${startLine}${endLine ? `-${endLine}` : ''})` : ''
+              }`}
+            >
+              <FileCode className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>{children}</span>
+            </button>
+          );
+        }
+
+        // 3. True External Web Link
         return (
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="text-primary hover:underline font-medium inline-flex items-center gap-0.5 transition-colors"
           >
             <span>{children}</span>
@@ -359,12 +418,16 @@ export function MarkdownContent({
         );
       }
     }),
-    [onImageClick, onFileClick]
+    [onImageClick, onFileClick, navigate]
   );
 
   return (
     <div className={`prose-sm dark:prose-invert max-w-none break-words ${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        urlTransform={(url) => url}
+        components={components}
+      >
         {safeContent}
       </ReactMarkdown>
     </div>

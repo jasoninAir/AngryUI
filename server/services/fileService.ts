@@ -84,7 +84,19 @@ const MAX_PREVIEW_BYTES = 2 * 1024 * 1024; // 2MB
 
 export function readWorkspaceFile(filePath: string, workspaceRoot?: string): FileContentResult {
   let cleanPath = filePath.startsWith('file://') ? filePath.replace(/^file:\/\//, '') : filePath;
-  cleanPath = path.resolve(cleanPath.trim());
+  cleanPath = cleanPath.trim();
+
+  // Try resolving directly or via workspaceRoot
+  let resolvedPath = path.resolve(cleanPath);
+  if (!fs.existsSync(resolvedPath) && workspaceRoot) {
+    let cleanWs = workspaceRoot.startsWith('file://') ? workspaceRoot.replace(/^file:\/\//, '') : workspaceRoot;
+    const wsResolved = path.resolve(cleanWs.trim(), cleanPath);
+    if (fs.existsSync(wsResolved)) {
+      resolvedPath = wsResolved;
+    }
+  }
+
+  cleanPath = resolvedPath;
 
   if (!fs.existsSync(cleanPath)) {
     throw new Error(`File not found: ${filePath}`);

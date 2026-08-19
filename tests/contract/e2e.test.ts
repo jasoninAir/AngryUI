@@ -5,9 +5,12 @@ import { fetchProjects } from '../../src/lib/api';
 let server: ChildProcess | null = null;
 
 beforeAll(async () => {
+  const env = { ...process.env, AGY_WEBUI_PORT: '3001' };
+  delete env.AGY_WEBUI_TOKEN;
+
   server = spawn('npx', ['tsx', 'server/index.ts'], {
     stdio: 'pipe',
-    env: { ...process.env, AGY_WEBUI_PORT: '3001' }
+    env
   });
   // Wait for server to be ready
   await new Promise((resolve) => setTimeout(resolve, 3000));

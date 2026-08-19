@@ -5,6 +5,14 @@ export function checkToken(req: IncomingMessage, expected: string | null): boole
   if (!expected) return true; // no token required
   const auth = req.headers['authorization'];
   if (typeof auth === 'string' && auth === `Bearer ${expected}`) return true;
+
+  // Check Cookie header (essential for iOS PWA / WebViews)
+  const cookieHeader = req.headers['cookie'];
+  if (typeof cookieHeader === 'string') {
+    const match = cookieHeader.match(/(?:^|;\s*)angryui_auth_token=([^;]*)/);
+    if (match && decodeURIComponent(match[1]) === expected) return true;
+  }
+
   // For WebSocket: also check URL token query
   const url = new URL(req.url ?? '/', 'http://localhost');
   if (url.searchParams.get('token') === expected) return true;

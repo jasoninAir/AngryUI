@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderPlus, X, Folder, ArrowRight } from 'lucide-react';
+import { FolderPlus, X, Folder, ArrowRight, Pin } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { pinWorkspace } from '@/lib/pinnedWorkspaces';
 import { generateUUID } from '@/lib/uuid';
 
 interface NewSessionModalProps {
@@ -15,6 +16,7 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
   const { isMobile, closeSidebar } = useSidebar();
   const { t } = useLanguage();
   const [workspacePath, setWorkspacePath] = useState('');
+  const [shouldPin, setShouldPin] = useState(true);
   const [error, setError] = useState('');
 
   const cleanPaths = Array.from(
@@ -31,6 +33,10 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
     if (!cleanPath) {
       setError(t('workspacePathPlaceholder'));
       return;
+    }
+
+    if (shouldPin) {
+      pinWorkspace(cleanPath);
     }
 
     const conversationId = generateUUID();
@@ -86,6 +92,22 @@ export function NewSessionModal({ existingWorkspaces, onClose }: NewSessionModal
               className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             {error && <p className="text-xs text-destructive">{error}</p>}
+          </div>
+
+          {/* Pin Workspace Option */}
+          <div className="flex items-center gap-2 pt-1">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={shouldPin}
+                onChange={(e) => setShouldPin(e.target.checked)}
+                className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+              />
+              <span className="flex items-center gap-1">
+                <Pin className="w-3 h-3 text-amber-500" />
+                <span>{t('pinToFavorites')}</span>
+              </span>
+            </label>
           </div>
 
           {/* Quick Select from Existing Workspaces */}

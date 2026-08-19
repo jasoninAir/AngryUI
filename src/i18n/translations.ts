@@ -59,6 +59,10 @@ export const translations = {
     showArchived: 'Show Archived',
     hideArchived: 'Hide Archived',
     sessionsCount: 'sessions',
+    pinWorkspace: 'Pin project directory',
+    unpinWorkspace: 'Unpin project directory',
+    pinToFavorites: 'Pin to favorites',
+    noSessionsClickToStart: 'No active sessions (click + to start)',
 
     // Chat Header & Controls
     model: 'Model',
@@ -242,6 +246,10 @@ export const translations = {
     showArchived: '显示归档',
     hideArchived: '隐藏归档',
     sessionsCount: '个会话',
+    pinWorkspace: '固定工作区目录',
+    unpinWorkspace: '取消固定目录',
+    pinToFavorites: '固定到常用项目目录',
+    noSessionsClickToStart: '暂无会话，点击 + 发起新对话',
 
     // Chat Header & Controls
     model: '模型',
@@ -425,6 +433,10 @@ export const translations = {
     showArchived: '顯示封存',
     hideArchived: '隱藏封存',
     sessionsCount: '個會話',
+    pinWorkspace: '固定工作區目錄',
+    unpinWorkspace: '取消固定目錄',
+    pinToFavorites: '固定到常用專案目錄',
+    noSessionsClickToStart: '暫無會話，點擊 + 發起新對話',
 
     // Chat Header & Controls
     model: '模型',
@@ -608,6 +620,10 @@ export const translations = {
     showArchived: 'アーカイブを表示',
     hideArchived: 'アーカイブを非表示',
     sessionsCount: '件のセッション',
+    pinWorkspace: 'ワークスペースをピン留め',
+    unpinWorkspace: 'ピン留めを解除',
+    pinToFavorites: 'お気に入りにピン留め',
+    noSessionsClickToStart: 'セッションがありません (+ を押して新規開始)',
 
     // Chat Header & Controls
     model: 'モデル',
@@ -791,6 +807,10 @@ export const translations = {
     showArchived: 'Mostrar Archivadas',
     hideArchived: 'Ocultar Archivadas',
     sessionsCount: 'sesiones',
+    pinWorkspace: 'Fijar espacio de trabajo',
+    unpinWorkspace: 'Desfijar espacio de trabajo',
+    pinToFavorites: 'Fijar a favoritos',
+    noSessionsClickToStart: 'Sin sesiones activas (clic + para iniciar)',
 
     // Chat Header & Controls
     model: 'Modelo',

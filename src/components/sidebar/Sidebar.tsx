@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { useProjectIndex } from '@/hooks/useProjectIndex';
+import { useProjectIndex, type ProjectGroup } from '@/hooks/useProjectIndex';
 import { useSidebar } from '@/context/SidebarContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSessionStatus } from '@/context/SessionStatusContext';
+import { usePinnedWorkspaces } from '@/lib/pinnedWorkspaces';
 import { WorkspaceGroup } from './WorkspaceGroup';
 import { NewSessionModal } from './NewSessionModal';
 import { LanguageMenu } from './LanguageMenu';
@@ -14,9 +15,10 @@ import { SettingsModal } from '@/components/settings/SettingsModal';
 
 export function Sidebar() {
   const location = useLocation();
-  const { isOpen, isMobile, closeSidebar, toggleSidebar } = useSidebar();
+  const { isOpen, isMobile, dragOffset, closeSidebar, toggleSidebar } = useSidebar();
   const { t } = useLanguage();
   const { wsReadyState, wsRetryCount } = useSessionStatus();
+  const { pinnedWorkspaces, isPinned, togglePin } = usePinnedWorkspaces();
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -34,6 +36,24 @@ export function Sidebar() {
     loading
   } = useProjectIndex();
 
+  const isDragging = isMobile && dragOffset !== null;
+  const isVisibleMobile = isMobile && (isOpen || isDragging);
+
+  // Compute mobile drawer transform and backdrop opacity
+  const mobileTranslateX = isDragging
+    ? `${dragOffset - 288}px`
+    : isOpen
+    ? '0px'
+    : '-100%';
+
+  const backdropOpacity = isDragging
+    ? (dragOffset / 288) * 0.6
+    : isOpen
+    ? 0.6
+    : 0;
+
+  const backdropPointerEvents = (isDragging && dragOffset > 15) || isOpen ? 'auto' : 'none';
+
   // Extract active conversationId and workspace query from route /chat/:id?workspace=...
   const match = location.pathname.match(/^\/chat\/([^/]+)/);
   const activeConversationId = match ? match[1] : undefined;
@@ -45,24 +65,52 @@ export function Sidebar() {
       : rawWorkspace
     : undefined;
 
-  // Synthesize group list: if active route is a new session with a workspace not in SQLite yet, include it
-  const displayGroups = [...groups];
-  if (
-    activeConversationId &&
-    activeWorkspaceClean &&
-    !groups.some((g) => {
-      const gw = g.workspace.startsWith('file://') ? g.workspace.replace('file://', '') : g.workspace;
-      return gw === activeWorkspaceClean;
-    })
-  ) {
-    displayGroups.unshift({
+  // Synthesize group list:
+  // 1. Existing groups from SQLite index
+  // 2. Include all pinned workspaces (even with 0 sessions)
+  // 3. Include active route workspace if not present
+  // 4. Sort: pinned groups first, then alphabetically
+  const groupMap = new Map<string, ProjectGroup>();
+  for (const g of groups) {
+    const cleanW = g.workspace.startsWith('file://') ? g.workspace.replace('file://', '') : g.workspace;
+    groupMap.set(cleanW, g);
+  }
+
+  // Ensure all pinned workspaces are retained in the tree
+  for (const pinned of pinnedWorkspaces) {
+    if (!groupMap.has(pinned)) {
+      groupMap.set(pinned, {
+        workspace: pinned,
+        conversations: []
+      });
+    }
+  }
+
+  // Ensure active route workspace is included
+  if (activeConversationId && activeWorkspaceClean && !groupMap.has(activeWorkspaceClean)) {
+    groupMap.set(activeWorkspaceClean, {
       workspace: activeWorkspaceClean,
       conversations: []
     });
   }
 
-  const existingWorkspaces = groups.map((g) => g.workspace);
+  const displayGroups = Array.from(groupMap.values()).sort((a, b) => {
+    const aClean = a.workspace.startsWith('file://') ? a.workspace.replace('file://', '') : a.workspace;
+    const bClean = b.workspace.startsWith('file://') ? b.workspace.replace('file://', '') : b.workspace;
+    const aPinned = isPinned(aClean);
+    const bPinned = isPinned(bClean);
 
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return aClean.localeCompare(bClean);
+  });
+
+  const existingWorkspaces = Array.from(
+    new Set([...groups.map((g) => g.workspace), ...pinnedWorkspaces])
+  );
+
+  // On desktop, if sidebar is closed we render nothing.
+  // On mobile, the sidebar is always mounted and animated via CSS translate.
   if (!isOpen && !isMobile) {
     return null;
   }
@@ -71,9 +119,18 @@ export function Sidebar() {
     <nav
       role="navigation"
       aria-label="Main navigation"
+      style={
+        isMobile
+          ? {
+              transform: `translate3d(${mobileTranslateX}, 0, 0)`,
+              transition: isDragging ? 'none' : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+              pointerEvents: isVisibleMobile || isOpen ? 'auto' : 'none'
+            }
+          : undefined
+      }
       className={`h-full h-[100dvh] max-h-[100dvh] bg-card border-r border-border flex flex-col justify-between select-none ${
         isMobile
-          ? 'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] shadow-2xl animate-in slide-in-from-left duration-200'
+          ? 'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] shadow-2xl will-change-transform'
           : 'w-64 shrink-0 transition-all duration-200'
       }`}
     >
@@ -160,6 +217,8 @@ export function Sidebar() {
                 workspace={g.workspace}
                 conversations={g.conversations}
                 activeConversationId={activeConversationId}
+                isPinned={isPinned(g.workspace)}
+                onTogglePin={togglePin}
                 onRename={rename}
                 onArchive={archive}
                 onDelete={remove}
@@ -225,15 +284,20 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Backdrop Overlay */}
-      {isMobile && isOpen && (
+      {isMobile && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          style={{
+            opacity: backdropOpacity,
+            pointerEvents: backdropPointerEvents,
+            transition: isDragging ? 'none' : 'opacity 0.28s ease-out'
+          }}
+          className="fixed inset-0 z-40 bg-black backdrop-blur-xs"
           onClick={closeSidebar}
         />
       )}
 
-      {/* Render Sidebar if Open (or on desktop when open) */}
-      {isOpen && sidebarContent}
+      {/* Render Sidebar on mobile (always in DOM for smooth sliding) or on desktop if open */}
+      {(isMobile || isOpen) && sidebarContent}
 
       {/* New Session Modal */}
       {showNewSessionModal && (
