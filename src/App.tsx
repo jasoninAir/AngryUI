@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { ChatPage } from './pages/ChatPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { PanelLeftOpen, KeyRound, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 
 function LoginScreen({ onLogin }: { onLogin: (token: string) => Promise<{ success: boolean; error?: string }> }) {
@@ -145,16 +146,20 @@ function AppContent() {
         >
           Skip to main content
         </a>
-        <Sidebar />
+        <ErrorBoundary fallbackTitle="Sidebar Error">
+          <Sidebar />
+        </ErrorBoundary>
         <main id="main-content" className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/chat/:conversationId" element={<ChatPage />} />
-            <Route path="/c/:conversationId" element={<ChatPage />} />
-            <Route path="/session/:conversationId" element={<ChatPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <ErrorBoundary fallbackTitle="Application Error">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/chat/:conversationId" element={<ChatPage />} />
+              <Route path="/c/:conversationId" element={<ChatPage />} />
+              <Route path="/session/:conversationId" element={<ChatPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
       </div>
     </SidebarProvider>
@@ -167,7 +172,9 @@ export default function App() {
       <LanguageProvider>
         <SessionStatusProvider>
           <AuthProvider>
-            <AppContent />
+            <ErrorBoundary fallbackTitle="Critical UI Error">
+              <AppContent />
+            </ErrorBoundary>
           </AuthProvider>
         </SessionStatusProvider>
       </LanguageProvider>

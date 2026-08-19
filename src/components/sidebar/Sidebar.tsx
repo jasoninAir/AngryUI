@@ -8,7 +8,7 @@ import { usePinnedWorkspaces } from '@/lib/pinnedWorkspaces';
 import { WorkspaceGroup } from './WorkspaceGroup';
 import { NewSessionModal } from './NewSessionModal';
 import { LanguageMenu } from './LanguageMenu';
-import { Archive, RefreshCw, Settings, Plus, PanelLeftClose, WifiOff, Gauge } from 'lucide-react';
+import { Archive, RefreshCw, Settings, Plus, PanelLeftClose, WifiOff, Gauge, Bug } from 'lucide-react';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { QuotaModal } from '@/components/quota/QuotaModal';
 import { SettingsModal } from '@/components/settings/SettingsModal';
