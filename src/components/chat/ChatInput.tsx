@@ -163,6 +163,8 @@ export const ChatInput = forwardRef<
         e.preventDefault();
         addFiles(files);
       }
+      // iOS Safari may deny clipboard file access — let default paste proceed for text
+      // User can use paperclip button as fallback for images
     };
 
     window.addEventListener('paste', handleGlobalPaste);
@@ -183,6 +185,8 @@ export const ChatInput = forwardRef<
       e.preventDefault();
       addFiles(files);
     }
+    // iOS Safari may deny clipboard file access — let default paste proceed for text
+    // User can use paperclip button as fallback for images
   };
 
   // Drag and drop handlers

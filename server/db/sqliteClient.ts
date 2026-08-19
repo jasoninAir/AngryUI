@@ -28,6 +28,16 @@ export function openConversationDb(): Database.Database {
   const dbPath = path.join(getConfig().agyHome, 'conversation_summaries.db');
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   db.pragma('journal_mode = WAL');
+
+  // Schema version check
+  const EXPECTED_SCHEMA_VERSION = 1;
+  try {
+    const [{ version }] = db.prepare('PRAGMA user_version').all() as [{ version: number }];
+    if (version && version !== EXPECTED_SCHEMA_VERSION) {
+      console.warn(`[sqlite] Schema version mismatch: expected ${EXPECTED_SCHEMA_VERSION}, got ${version}`);
+    }
+  } catch { /* pragma may not exist on older dbs */ }
+
   cached = db;
   return db;
 }

@@ -3,15 +3,18 @@ import { useLocation, Link } from 'react-router-dom';
 import { useProjectIndex } from '@/hooks/useProjectIndex';
 import { useSidebar } from '@/context/SidebarContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useSessionStatus } from '@/context/SessionStatusContext';
 import { WorkspaceGroup } from './WorkspaceGroup';
 import { NewSessionModal } from './NewSessionModal';
 import { LanguageMenu } from './LanguageMenu';
-import { Archive, RefreshCw, Settings, Plus, PanelLeftClose } from 'lucide-react';
+import { Archive, RefreshCw, Settings, Plus, PanelLeftClose, WifiOff } from 'lucide-react';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 
 export function Sidebar() {
   const location = useLocation();
   const { isOpen, isMobile, closeSidebar, toggleSidebar } = useSidebar();
   const { t } = useLanguage();
+  const { wsReadyState, wsRetryCount } = useSessionStatus();
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
 
   const {
@@ -69,7 +72,7 @@ export function Sidebar() {
       }`}
     >
       {/* Top Header */}
-      <div className="p-3 border-b border-border flex items-center justify-between">
+      <div className="p-3 border-b border-border flex flex-col gap-1.5">
         <Link to="/" className="flex items-center gap-2 min-w-0 group hover:opacity-90 transition-opacity">
           <img
             src="/logo.png"
@@ -85,32 +88,50 @@ export function Sidebar() {
             </span>
           )}
         </Link>
-        <div className="flex items-center gap-0.5 shrink-0">
-          {/* New Project / Session Button (+) */}
-          <button
-            onClick={() => setShowNewSessionModal(true)}
-            title={t('newSessionTitle')}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          {/* Refresh Button */}
-          <button
-            onClick={() => refresh()}
-            disabled={loading}
-            title={t('refreshFiles')}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 transition-colors cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          {/* Collapse Sidebar Button */}
-          <button
-            onClick={toggleSidebar}
-            title="Collapse Sidebar"
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-0.5 cursor-pointer"
-          >
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-0.5 shrink-0">
+            {/* New Project / Session Button (+) */}
+            <button
+              onClick={() => setShowNewSessionModal(true)}
+              title={t('newSessionTitle')}
+              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            {/* Refresh Button */}
+            <button
+              onClick={() => refresh()}
+              disabled={loading}
+              title={t('refreshFiles')}
+              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            {/* Collapse Sidebar Button */}
+            <button
+              onClick={toggleSidebar}
+              title="Collapse Sidebar"
+              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ml-0.5 cursor-pointer"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          </div>
+          {/* Connection Status Indicator */}
+          {wsReadyState === WebSocket.CONNECTING && (
+            <span className="text-xs text-muted-foreground">Connecting…</span>
+          )}
+          {wsReadyState === WebSocket.CLOSED && wsRetryCount > 0 && (
+            <span className="text-xs text-amber-500 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              Reconnecting ({wsRetryCount})…
+            </span>
+          )}
+          {wsReadyState === WebSocket.CLOSED && wsRetryCount === 0 && (
+            <span className="text-xs text-destructive flex items-center gap-1">
+              <WifiOff className="w-3 h-3" />
+              Disconnected
+            </span>
+          )}
         </div>
       </div>
 
@@ -148,6 +169,9 @@ export function Sidebar() {
         <div className="flex items-center gap-1">
           {/* Language Switcher (aA icon with upward popover) */}
           <LanguageMenu dropUp={true} />
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           {/* Settings Button */}
           <Link

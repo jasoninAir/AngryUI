@@ -6,6 +6,7 @@ import { useSessionStatus } from '@/context/SessionStatusContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { SUPPORTED_MODELS, getModelConfig, EffortLevel } from '@/lib/models';
 import { authFetch } from '@/lib/api';
+import { findDangerMatches } from '@/lib/dangerCommands';
 import { MessageList } from './MessageList';
 import { ChatInput, ChatInputHandle } from './ChatInput';
 import { FileExplorerDrawer } from './FileExplorerDrawer';
@@ -354,6 +355,23 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
                   {permissionPrompt.command}
                 </div>
               )}
+              {permissionPrompt.command && (() => {
+                const dangers = findDangerMatches(permissionPrompt.command);
+                return dangers.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {dangers.map(d => (
+                      <span
+                        key={d.label}
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                          d.severity === 'high' ? 'bg-red-500/20 text-red-600 dark:text-red-400' : 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                        }`}
+                      >
+                        ⚠ {d.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
 
               <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-500/20">
                 <button

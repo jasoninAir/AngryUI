@@ -65,6 +65,14 @@ if (config.token) {
 // Bootstrap conversation index and routers
 const index = new ConversationIndex();
 index.load();
+
+// Backup SQLite on startup
+try {
+  const { backupSqliteDb } = await import('./utils/backup');
+  const dbPath = path.join(config.agyHome, 'conversation_summaries.db');
+  backupSqliteDb(dbPath, config.agyHome);
+} catch {}
+
 app.use('/api', createProjectsRouter(index));
 app.use('/api', createSettingsRouter());
 app.use('/api', createUploadRouter());

@@ -27,3 +27,19 @@ Plan: docs/superpowers/plans/2026-08-19-angryui-audit-fixes.md (in-memory — no
 - Commit: 605f649 fix(reliability): WS exponential backoff + server-side ping/pong
 - Review: Approved (87 tests pass, 3 new backoff unit tests)
 - Next: Task 1.3 (graceful shutdown pty kill)
+
+## Task 1.3: IN PROGRESS (implementer running)
+## Task 1.4: IN REVIEW (reviewer running)
+## Task 1.5: COMPLETE — merged into 67075a8 (pino logging commit 1.4)
+
+## Task 1.3: COMPLETE — Approved (PtyManager static registry + killAll + 10s shutdown)
+## Task 1.4: IN FIX — WS requestId propagation fix (1 important issue)
+
+## Task 1.4: COMPLETE — Approved (pino logger + requestId; WS requestId propagation fix in 592a56b)
+
+## PHASE 1: COMPLETE ✅
+All CRITICAL (0.1, 0.2) and HIGH (1.1-1.5) fixes done and approved.
+
+## PHASE 2: IN PROGRESS — 8 tasks (2.1-2.8) all implementing in parallel
+## PHASE 3: PENDING — Tasks 3.1-3.6
+## PHASE 4: PENDING — Task 4.1

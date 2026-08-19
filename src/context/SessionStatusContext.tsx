@@ -9,6 +9,8 @@ interface SessionStatusContextType {
   statuses: Record<string, SessionState>;
   getStatus: (conversationId: string) => SessionState;
   setLocalStatus: (conversationId: string, status: SessionState) => void;
+  wsReadyState: number;
+  wsRetryCount: number;
 }
 
 const SessionStatusContext = createContext<SessionStatusContextType | undefined>(undefined);
@@ -21,7 +23,7 @@ function wsUrl(): string {
 export function SessionStatusProvider({ children }: { children: React.ReactNode }) {
   const [statuses, setStatuses] = useState<Record<string, SessionState>>({});
   const prevStatusesRef = useRef<Record<string, SessionState>>({});
-  const { lastMessage, send } = useWebSocket(wsUrl());
+  const { lastMessage, send, readyState, retryCount } = useWebSocket(wsUrl());
 
   // Fetch initial active statuses from REST API
   useEffect(() => {
@@ -132,9 +134,11 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
     () => ({
       statuses,
       getStatus,
-      setLocalStatus
+      setLocalStatus,
+      wsReadyState: readyState,
+      wsRetryCount: retryCount
     }),
-    [statuses, getStatus, setLocalStatus]
+    [statuses, getStatus, setLocalStatus, readyState, retryCount]
   );
 
   return <SessionStatusContext.Provider value={value}>{children}</SessionStatusContext.Provider>;
