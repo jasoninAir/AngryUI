@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, renameSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, renameSync, chmodSync } from 'fs';
 import path from 'path';
 import { getConfig } from '../config';
 import { backupFile } from '../utils/backup';
@@ -18,6 +18,10 @@ export function readSettings(): SettingsFile {
  * Atomic write: write to a temp file, then rename.
  * Guarantees settings.json is never half-written, even on crash or kill.
  * Backup is created before the atomic swap.
+ *
+ * SECURITY NOTE: stores the "Always Allow" permission whitelist in plaintext.
+ * chmod 600 applied after each write. For stronger protection, consider OS keychain
+ * (Keychain/macOS, DPAPI/Windows, libsecret/Linux) — see docs/angryui-roadmap.md Phase 3.
  */
 export function writeSettings(s: SettingsFile): void {
   const file = path.join(getConfig().agyHome, 'settings.json');
@@ -25,6 +29,8 @@ export function writeSettings(s: SettingsFile): void {
   backupFile(file);
   writeFileSync(tmp, JSON.stringify(s, null, 2), 'utf-8');
   renameSync(tmp, file);
+  // SECURITY: restrict to owner-only after write — prevents other local users reading whitelist patterns
+  try { chmodSync(file, 0o600); } catch { /* ignore on Windows */ }
 }
 
 export function getAllowedCommands(): string[] {

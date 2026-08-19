@@ -42,6 +42,23 @@ function ensureSpawnHelperExecutable(): void {
 }
 
 export class PtyManager {
+  private static activeSessions = new Map<string, PtySession>();
+
+  static register(id: string, session: PtySession): void {
+    this.activeSessions.set(id, session);
+  }
+
+  static unregister(id: string): void {
+    this.activeSessions.delete(id);
+  }
+
+  static killAll(): void {
+    for (const [, s] of this.activeSessions) {
+      try { s.kill(); } catch { /* ignore */ }
+    }
+    this.activeSessions.clear();
+  }
+
   spawn(conversationId: string, cwd?: string): PtySession {
     ensureSpawnHelperExecutable();
 
@@ -88,7 +105,7 @@ export class PtyManager {
       for (const cb of exitCallbacks) cb();
     });
 
-    return {
+    const session: PtySession = {
       pid: proc.pid,
       onData(cb) {
         dataCallbacks.push(cb);
@@ -106,5 +123,15 @@ export class PtyManager {
         proc.kill();
       }
     };
+
+    // Register this session for tracking
+    PtyManager.register(conversationId, session);
+
+    // Unregister when process exits
+    proc.onExit(() => {
+      PtyManager.unregister(conversationId);
+    });
+
+    return session;
   }
 }

@@ -127,7 +127,16 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
           }
           send({ type: 'chat:done', conversationId: convId, payload: {}, timestamp: Date.now() });
         } catch (e: any) {
-          send({ type: 'chat:error', conversationId: convId, payload: { message: e.message }, timestamp: Date.now() });
+          send({
+            type: 'chat:error',
+            conversationId: convId,
+            payload: {
+              message: e.message,
+              code: 'TURN_ERROR',
+              requestId: (ws as any).requestId,
+            },
+            timestamp: Date.now()
+          });
         } finally {
           clearTimeout(timeout);
           activeTurns.delete(convId);
