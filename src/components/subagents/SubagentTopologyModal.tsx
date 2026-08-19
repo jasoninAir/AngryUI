@@ -156,87 +156,94 @@ export function SubagentTopologyModal({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {subagents.map((sub) => (
-                <div
-                  key={sub.conversationId}
-                  className="border border-border rounded-xl p-4 bg-card/80 shadow-xs hover:border-primary/50 transition-all flex flex-col justify-between space-y-3 relative group"
-                >
-                  {/* Top Bar */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="p-2 rounded-lg bg-secondary border border-border/80 shrink-0">
-                        {getRoleIcon(sub.role, sub.typeName)}
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-semibold text-foreground truncate" title={sub.role}>
-                          {sub.role}
-                        </h4>
-                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
-                          <span className="capitalize">{sub.typeName}</span>
-                          <span>•</span>
-                          <span className="uppercase text-[10px] bg-muted px-1.5 py-0.2 rounded font-sans">
-                            {sub.model}
-                          </span>
+              {subagents.map((sub) => {
+                const role = sub.role || sub.typeName || 'Subagent';
+                const typeName = sub.typeName || 'subagent';
+                const model = sub.model || 'inherit';
+                const state = (sub.state || 'idle').toLowerCase();
+
+                return (
+                  <div
+                    key={sub.conversationId}
+                    className="border border-border rounded-xl p-4 bg-card/80 shadow-xs hover:border-primary/50 transition-all flex flex-col justify-between space-y-3 relative group"
+                  >
+                    {/* Top Bar */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="p-2 rounded-lg bg-secondary border border-border/80 shrink-0">
+                          {getRoleIcon(role, typeName)}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-semibold text-foreground truncate" title={role}>
+                            {role}
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+                            <span className="capitalize">{typeName}</span>
+                            <span>•</span>
+                            <span className="uppercase text-[10px] bg-muted px-1.5 py-0.2 rounded font-sans">
+                              {model}
+                            </span>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Status Badge */}
+                      <div className="shrink-0">
+                        {state === 'running' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            RUNNING
+                          </span>
+                        ) : state === 'done' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            DONE
+                          </span>
+                        ) : state === 'errored' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-500 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            ERROR
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                            {state.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <div className="shrink-0">
-                      {sub.state === 'running' ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-pulse">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          RUNNING
-                        </span>
-                      ) : sub.state === 'done' ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          DONE
-                        </span>
-                      ) : sub.state === 'errored' ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-500 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          ERROR
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
-                          {sub.state.toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Prompt / Last Action Preview */}
-                  <div className="text-xs text-muted-foreground bg-muted/20 border border-border/50 rounded-lg p-2.5 font-mono line-clamp-2 leading-relaxed">
-                    {sub.lastMessage || sub.prompt || 'Executing subagent instructions...'}
-                  </div>
-
-                  {/* Metrics Footer & Transcript Inspection Button */}
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/50 pt-2.5">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-muted-foreground" />
-                        <span>{formatDuration(sub.durationMs)}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Cpu className="w-3 h-3 text-muted-foreground" />
-                        <span>{sub.stepCount} {t('steps')}</span>
-                      </span>
+                    {/* Prompt / Last Action Preview */}
+                    <div className="text-xs text-muted-foreground bg-muted/20 border border-border/50 rounded-lg p-2.5 font-mono line-clamp-2 leading-relaxed">
+                      {sub.lastMessage || sub.prompt || 'Executing subagent instructions...'}
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setActiveTranscriptId(sub.conversationId);
-                        setActiveRoleTitle(sub.role);
-                      }}
-                      className="px-2.5 py-1 bg-secondary text-secondary-foreground hover:bg-accent border border-border rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
-                    >
-                      <FileText className="w-3 h-3 text-primary" />
-                      <span>{t('viewTranscript')}</span>
-                    </button>
+                    {/* Metrics Footer & Transcript Inspection Button */}
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/50 pt-2.5">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-muted-foreground" />
+                          <span>{formatDuration(sub.durationMs)}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Cpu className="w-3 h-3 text-muted-foreground" />
+                          <span>{sub.stepCount} {t('steps')}</span>
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setActiveTranscriptId(sub.conversationId);
+                          setActiveRoleTitle(sub.role);
+                        }}
+                        className="px-2.5 py-1 bg-secondary text-secondary-foreground hover:bg-accent border border-border rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <FileText className="w-3 h-3 text-primary" />
+                        <span>{t('viewTranscript')}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

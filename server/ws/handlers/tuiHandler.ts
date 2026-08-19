@@ -1,15 +1,26 @@
 import { WebSocket } from 'ws';
 import { PtyManager } from '../../services/ptyManager';
+import { ConversationIndex } from '../../db/conversationIndex';
 
-export function handleTuiConnection(ws: WebSocket, conversationId: string): void {
+export function handleTuiConnection(
+  ws: WebSocket,
+  conversationId: string,
+  index?: ConversationIndex
+): void {
   const manager = new PtyManager();
-  const session = manager.spawn(conversationId);
+  const conv = index ? index.get(conversationId) : undefined;
+  const session = manager.spawn(conversationId, conv?.workspace);
 
   session.onData((data) => {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'tui:data', data }));
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'tui:data', data }));
+    }
   });
+
   session.onExit(() => {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'tui:exit' }));
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'tui:exit' }));
+    }
   });
 
   ws.on('message', (raw) => {
@@ -19,11 +30,22 @@ export function handleTuiConnection(ws: WebSocket, conversationId: string): void
     } catch {
       return;
     }
-    if (msg.type === 'tui:input') session.write(msg.data);
-    if (msg.type === 'tui:resize') session.resize(msg.cols, msg.rows);
+    if (msg.type === 'tui:input' && msg.data !== undefined) {
+      try {
+        session.write(msg.data);
+      } catch {}
+    }
+    if (msg.type === 'tui:resize' && typeof msg.cols === 'number' && typeof msg.rows === 'number') {
+      try {
+        session.resize(msg.cols, msg.rows);
+      } catch {}
+    }
   });
 
   ws.on('close', () => {
-    session.kill();
+    try {
+      session.kill();
+    } catch {}
   });
 }
+

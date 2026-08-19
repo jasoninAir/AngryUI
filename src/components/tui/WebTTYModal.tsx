@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { getStoredToken } from '@/lib/auth';
 import 'xterm/css/xterm.css';
 
 const VIRTUAL_KEYS: Array<{ label: string; input: string; minW?: number }> = [
@@ -33,41 +34,80 @@ export function WebTTYModal({
   const ref = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const [status, setStatus] = useState<'connecting' | 'connected' | 'error' | 'closed'>('connecting');
 
   useEffect(() => {
-    const term = new Terminal({ cursorBlink: true, theme: { background: '#1e1e1e' } });
+    const term = new Terminal({
+      cursorBlink: true,
+      theme: { background: '#18181b', foreground: '#f4f4f5' },
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      fontSize: 13,
+      lineHeight: 1.25
+    });
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(ref.current!);
     fit.fit();
     termRef.current = term;
 
+    term.writeln('\x1b[90m[WebTTY] Connecting to Antigravity session...\x1b[0m');
+
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${location.host}/ws/tui/${conversationId}`);
+    const token = getStoredToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
+    const wsUrl = `${proto}://${location.host}/ws/tui/${encodeURIComponent(conversationId)}${query}`;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      setStatus('connected');
+      term.writeln('\x1b[32m[WebTTY] Connected.\x1b[0m\r\n');
       ws.send(JSON.stringify({ type: 'tui:resize', cols: term.cols, rows: term.rows }));
     };
+
     ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'tui:data') term.write(msg.data);
-      if (msg.type === 'tui:exit') onClose();
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'tui:data') term.write(msg.data);
+        if (msg.type === 'tui:exit') {
+          term.writeln('\r\n\x1b[90m[WebTTY] Session ended.\x1b[0m');
+          setTimeout(() => onClose(), 800);
+        }
+      } catch {
+        term.write(e.data);
+      }
     };
+
+    ws.onerror = () => {
+      setStatus('error');
+      term.writeln('\r\n\x1b[31m[WebTTY] Connection error. Please check authentication and host status.\x1b[0m');
+    };
+
+    ws.onclose = () => {
+      setStatus('closed');
+      term.writeln('\r\n\x1b[90m[WebTTY] Connection closed.\x1b[0m');
+    };
+
     term.onData((data) => {
-      ws.send(JSON.stringify({ type: 'tui:input', data }));
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'tui:input', data }));
+      }
     });
 
     const handleResize = () => {
-      fit.fit();
-      ws.send(JSON.stringify({ type: 'tui:resize', cols: term.cols, rows: term.rows }));
+      try {
+        fit.fit();
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'tui:resize', cols: term.cols, rows: term.rows }));
+        }
+      } catch {}
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      ws.close();
-      term.dispose();
+      try { ws.close(); } catch {}
+      try { term.dispose(); } catch {}
     };
   }, [conversationId, onClose]);
 
@@ -87,8 +127,17 @@ export function WebTTYModal({
     >
       <div className="border-b border-border px-3 sm:px-4 py-2 flex items-center justify-between bg-card/60 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${
+              status === 'connected'
+                ? 'bg-emerald-500 animate-pulse'
+                : status === 'connecting'
+                ? 'bg-amber-500 animate-pulse'
+                : 'bg-rose-500'
+            }`}
+          />
           <span className="font-mono text-xs sm:text-sm font-medium">WebTTY — {conversationId.slice(0, 8)}</span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">({status})</span>
         </div>
         <button
           onClick={onClose}

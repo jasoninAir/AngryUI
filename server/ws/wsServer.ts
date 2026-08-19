@@ -33,8 +33,8 @@ export function attachWsServer(
 
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname.startsWith('/ws/tui/')) {
-      const conversationId = url.pathname.replace('/ws/tui/', '');
-      handleTuiConnection(ws, conversationId);
+      const conversationId = decodeURIComponent(url.pathname.replace('/ws/tui/', ''));
+      handleTuiConnection(ws, conversationId, index);
       return;
     }
 
