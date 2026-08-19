@@ -4,6 +4,7 @@ import { ConversationIndex } from '../../db/conversationIndex';
 import { AgyEvent } from '../../utils/streamParser';
 import { conversationHub, SessionState } from '../conversationHub';
 import { extractSessionSummary, upsertConversationSummary } from '../../services/sessionSummaryService';
+import { ClientMsgSchema } from '../protocol';
 
 interface ClientMsg {
   type: string;
@@ -71,26 +72,34 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       return;
     }
 
-    if (msg.type === 'chat:subscribe' && msg.conversationId) {
-      subscribeConversation(msg.conversationId);
-      const currentStatus = conversationHub.getStatus(msg.conversationId);
+    // Validate message against schema
+    const parsed = ClientMsgSchema.safeParse(msg);
+    if (!parsed.success) {
+      send({ type: 'chat:error', conversationId: 'system', payload: { message: 'Invalid message format', code: 'INVALID_MSG' }, timestamp: Date.now() });
+      return;
+    }
+    const safeMsg = parsed.data;
+
+    if (safeMsg.type === 'chat:subscribe' && safeMsg.conversationId) {
+      subscribeConversation(safeMsg.conversationId);
+      const currentStatus = conversationHub.getStatus(safeMsg.conversationId);
       send({
         type: 'session:status',
-        conversationId: msg.conversationId,
+        conversationId: safeMsg.conversationId,
         payload: { state: currentStatus },
         timestamp: Date.now()
       });
       return;
     }
 
-    if (msg.type === 'chat:unsubscribe' && msg.conversationId) {
-      unsubscribeConversation(msg.conversationId);
+    if (safeMsg.type === 'chat:unsubscribe' && safeMsg.conversationId) {
+      unsubscribeConversation(safeMsg.conversationId);
       return;
     }
 
-    if (msg.type === 'chat:send' && msg.conversationId && msg.payload) {
-      const convId = msg.conversationId;
-      const { message, model, effort, workspace } = msg.payload;
+    if (safeMsg.type === 'chat:send' && safeMsg.conversationId && safeMsg.payload) {
+      const convId = safeMsg.conversationId;
+      const { message, model, effort, workspace } = safeMsg.payload;
 
       subscribeConversation(convId);
 
@@ -158,21 +167,21 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       })();
     }
 
-    if (msg.type === 'chat:set_status' && msg.conversationId && msg.payload?.status) {
-      conversationHub.setStatus(msg.conversationId, msg.payload.status);
+    if (safeMsg.type === 'chat:set_status' && safeMsg.conversationId && safeMsg.payload?.status) {
+      conversationHub.setStatus(safeMsg.conversationId, safeMsg.payload.status);
     }
 
-    if (msg.type === 'chat:cancel' && msg.conversationId) {
-      const turn = activeTurns.get(msg.conversationId);
+    if (safeMsg.type === 'chat:cancel' && safeMsg.conversationId) {
+      const turn = activeTurns.get(safeMsg.conversationId);
       if (turn) {
         turn.abort();
-        activeTurns.delete(msg.conversationId);
-        conversationHub.setStatus(msg.conversationId, 'IDLE');
-        send({ type: 'session:status', conversationId: msg.conversationId, payload: { state: 'IDLE' }, timestamp: Date.now() });
+        activeTurns.delete(safeMsg.conversationId);
+        conversationHub.setStatus(safeMsg.conversationId, 'IDLE');
+        send({ type: 'session:status', conversationId: safeMsg.conversationId, payload: { state: 'IDLE' }, timestamp: Date.now() });
       }
     }
 
-    if (msg.type === 'chat:quota') {
+    if (safeMsg.type === 'chat:quota') {
       runner.quota().then((output) => {
         send({ type: 'quota:result', conversationId: 'system', payload: { output }, timestamp: Date.now() });
       });

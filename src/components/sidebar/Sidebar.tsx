@@ -64,7 +64,9 @@ export function Sidebar() {
   }
 
   const sidebarContent = (
-    <aside
+    <nav
+      role="navigation"
+      aria-label="Main navigation"
       className={`h-screen bg-card border-r border-border flex flex-col justify-between select-none ${
         isMobile
           ? 'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] shadow-2xl animate-in slide-in-from-left duration-200'
@@ -202,7 +204,7 @@ export function Sidebar() {
           </button>
         )}
       </div>
-    </aside>
+    </nav>
   );
 
   return (

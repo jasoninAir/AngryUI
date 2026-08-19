@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
+import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
 import { writeFileSync } from 'fs';
 
@@ -31,6 +32,23 @@ export default defineConfig({
     react(),
     statsWriter(),
     visualizer({ filename: 'dist/stats.html', open: false, gzipSize: true }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'logo.png'],
+      manifest: {
+        name: 'AngryUI',
+        short_name: 'AngryUI',
+        description: 'Web UI for Antigravity CLI',
+        theme_color: '#1e1e1e',
+        background_color: '#ffffff',
+        display: 'standalone',
+        icons: [
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+      },
+      workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'] },
+    }),
   ],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }

@@ -9,7 +9,7 @@ import {
   forwardRef,
   useImperativeHandle
 } from 'react';
-import { Send, Square, Paperclip, X, FileText, Loader2 } from 'lucide-react';
+import { Send, Square, Paperclip, X, FileText, Loader2, Camera } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { generateUUID } from '@/lib/uuid';
 import { getStoredToken } from '@/lib/auth';
@@ -284,6 +284,7 @@ export const ChatInput = forwardRef<
         type="file"
         multiple
         accept="image/*,.pdf,.txt,.md,.json,.csv,.yaml,.yml,.docx,.xlsx,.tar,.zip"
+        capture="environment"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -343,6 +344,16 @@ export const ChatInput = forwardRef<
           <Paperclip className="w-4 h-4" />
         </button>
 
+        {/* Camera Button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          title={t('takePhoto') || 'Take photo'}
+          className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
+        >
+          <Camera className="w-4 h-4" />
+        </button>
+
         {/* Dynamic Textarea */}
         <textarea
           ref={textareaRef}
@@ -352,6 +363,8 @@ export const ChatInput = forwardRef<
           onPaste={handlePaste}
           placeholder={t('inputPlaceholder')}
           rows={1}
+          aria-label="Chat message input"
+          aria-live="polite"
           className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 min-h-[44px] max-h-[40vh] leading-relaxed transition-[height] duration-75"
         />
 

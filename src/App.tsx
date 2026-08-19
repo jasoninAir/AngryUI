@@ -61,8 +61,14 @@ function AppContent() {
   return (
     <SidebarProvider>
       <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded"
+        >
+          Skip to main content
+        </a>
         <Sidebar />
-        <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        <main id="main-content" className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/chat/:conversationId" element={<ChatPage />} />

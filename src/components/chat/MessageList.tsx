@@ -1,7 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { FixedSizeList } from 'react-window';
 import { MessageItem } from './MessageItem';
 import { useLanguage } from '@/context/LanguageContext';
 import { Loader2 } from 'lucide-react';
+
+const MESSAGE_ITEM_HEIGHT = 80;
 
 export function MessageList({
   messages,
@@ -10,12 +13,46 @@ export function MessageList({
   messages: any[];
   loading?: boolean;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(0);
   const { t } = useLanguage();
 
+  // Measure container height for virtualization
+  const measureContainer = useCallback(() => {
+    if (containerRef.current) {
+      setContainerRef.current?.();
+    }
+  }, []);
+
+  const setContainerRef = useCallback(() => {
+    if (containerRef.current) {
+      const height = containerRef.current.clientHeight;
+      setContainerHeight(height);
+    }
+  }, []);
+
   useEffect(() => {
-    if (ref.current) {
-      ref.current.scrollTop = ref.current.scrollHeight;
+    setContainerRef();
+
+    const resizeObserver = new ResizeObserver(() => {
+      setContainerRef();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [setContainerRef]);
+
+  // Scroll to bottom on new messages (unless user has scrolled up)
+  useEffect(() => {
+    if (containerRef.current && messages.length > 0) {
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+      if (isAtBottom) {
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      }
     }
   }, [messages]);
 
@@ -39,11 +76,33 @@ export function MessageList({
     );
   }
 
+  // Use virtualization if we have a valid container height
+  const useVirtualization = containerHeight > 0;
+
   return (
-    <div ref={ref} className="h-full overflow-y-auto p-4 space-y-3">
-      {messages.map((m) => (
-        <MessageItem key={m.id} msg={m} />
-      ))}
+    <div ref={containerRef} className="h-full overflow-y-auto p-4">
+      {useVirtualization ? (
+        <FixedSizeList
+          height={containerHeight - 16} // Subtract padding
+          itemCount={messages.length}
+          itemSize={MESSAGE_ITEM_HEIGHT}
+          width="100%"
+          style={{ paddingBottom: 16 }}
+        >
+          {({ index, style }) => (
+            <div style={{ ...style, paddingBottom: 16 }}>
+              <MessageItem key={messages[index].id} msg={messages[index]} />
+            </div>
+          )}
+        </FixedSizeList>
+      ) : (
+        // Fallback to non-virtualized list while measuring
+        <div className="space-y-4">
+          {messages.map((m) => (
+            <MessageItem key={m.id} msg={m} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -74,7 +74,12 @@ export function WebTTYModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`WebTTY terminal — ${conversationId.slice(0, 8)}`}
+      className="fixed inset-0 z-50 bg-background flex flex-col"
+    >
       <div className="border-b border-border px-4 py-2 flex items-center justify-between">
         <span className="font-mono text-sm">WebTTY — {conversationId.slice(0, 8)}</span>
         <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">

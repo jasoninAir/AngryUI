@@ -43,3 +43,18 @@ All CRITICAL (0.1, 0.2) and HIGH (1.1-1.5) fixes done and approved.
 ## PHASE 2: IN PROGRESS — 8 tasks (2.1-2.8) all implementing in parallel
 ## PHASE 3: PENDING — Tasks 3.1-3.6
 ## PHASE 4: PENDING — Task 4.1
+
+## PHASE 2: COMPLETE ✅
+- 2.1 reconnecting status: c9bf4be ✅
+- 2.2 dark toggle: 64c6793 ✅
+- 2.3 WebTTY keys: 2e76628 ✅
+- 2.4 iOS paste: c9bf4be ✅
+- 2.5 useBatterySaver: 330360d ✅
+- 2.6 danger highlight: c9bf4be ✅
+- 2.7 SQLite backup: 64c6793 ✅
+- 2.8 bundle budget: 085677f ✅
+NOTE: npm→pnpm switch by implementer (package.json)
+All 87 tests pass.
+
+## PHASE 3: IN PROGRESS — Tasks 3.1-3.6 implementing
+## PHASE 4: PENDING — Task 4.1
