@@ -83,7 +83,7 @@ if (fs.existsSync(distPath)) {
 // Logs deltas; in later phases, this will broadcast over WebSocket.
 const discovery = new DiscoveryService(index);
 discovery.start((event) => {
-  console.log(`[Discovery] ${event.type}: ${event.conversation_id}`);
+  logger.info({ type: event.type, conversation_id: event.conversation_id }, '[Discovery]');
 });
 
 const httpServer = http.createServer(app);

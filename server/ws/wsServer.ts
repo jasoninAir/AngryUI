@@ -28,6 +28,9 @@ export function attachWsServer(
   });
 
   wss.on('connection', (ws: WebSocket, req: any) => {
+    // Propagate requestId to WS for logging (set by requestId middleware on HTTP request)
+    (ws as any).requestId = (req as any).requestId;
+
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname.startsWith('/ws/tui/')) {
       const conversationId = url.pathname.replace('/ws/tui/', '');
