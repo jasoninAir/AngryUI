@@ -10,6 +10,7 @@ import { LanguageMenu } from './LanguageMenu';
 import { Archive, RefreshCw, Settings, Plus, PanelLeftClose, WifiOff, Gauge } from 'lucide-react';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { QuotaModal } from '@/components/quota/QuotaModal';
+import { SettingsModal } from '@/components/settings/SettingsModal';
 
 export function Sidebar() {
   const location = useLocation();
@@ -18,6 +19,7 @@ export function Sidebar() {
   const { wsReadyState, wsRetryCount } = useSessionStatus();
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const {
     groups,
@@ -188,16 +190,17 @@ export function Sidebar() {
           </button>
 
           {/* Settings Button */}
-          <Link
-            to="/settings"
+          <button
             onClick={() => {
+              setShowSettingsModal(true);
               if (isMobile) closeSidebar();
             }}
             title={t('settings')}
+            aria-label={t('settings')}
             className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center cursor-pointer"
           >
             <Settings className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
 
         {/* Right Cluster: Archive Filter (if any) */}
@@ -248,6 +251,14 @@ export function Sidebar() {
         <QuotaModal
           isOpen={showQuotaModal}
           onClose={() => setShowQuotaModal(false)}
+        />
+      )}
+
+      {/* Settings Modal (Completely Opaque) */}
+      {showSettingsModal && (
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
         />
       )}
     </>

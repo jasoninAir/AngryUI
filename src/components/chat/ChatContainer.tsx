@@ -11,6 +11,7 @@ import { MessageList } from './MessageList';
 import { ChatInput, ChatInputHandle } from './ChatInput';
 import { FileExplorerDrawer } from './FileExplorerDrawer';
 import { QuotaModal } from '../quota/QuotaModal';
+import { WhitelistModal } from '../whitelist/WhitelistModal';
 import {
   Folder,
   History,
@@ -113,6 +114,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
   const [showTty, setShowTty] = useState(false);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [showWhitelistModal, setShowWhitelistModal] = useState(false);
 
   // Auto-fill workspace from database if not specified in searchParams
   useEffect(() => {
@@ -453,13 +455,13 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
               </span>
             </div>
 
-            <Link
-              to="/settings"
-              className="text-[11px] hover:text-foreground flex items-center gap-1 hover:underline text-muted-foreground shrink-0 ml-auto whitespace-nowrap"
+            <button
+              onClick={() => setShowWhitelistModal(true)}
+              className="text-[11px] hover:text-foreground flex items-center gap-1 hover:underline text-muted-foreground shrink-0 ml-auto whitespace-nowrap cursor-pointer"
             >
               <SlidersHorizontal className="w-3 h-3 shrink-0" />
               <span>{t('whitelistRules')}</span>
-            </Link>
+            </button>
           </div>
 
           {/* Pinned Bottom Input */}
@@ -498,6 +500,9 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
 
       {/* Quota Modal */}
       <QuotaModal isOpen={showQuotaModal} onClose={() => setShowQuotaModal(false)} />
+
+      {/* Whitelist Rules Modal */}
+      <WhitelistModal isOpen={showWhitelistModal} onClose={() => setShowWhitelistModal(false)} />
     </div>
   );
 }
