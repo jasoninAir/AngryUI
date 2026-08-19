@@ -86,6 +86,7 @@ function TreeNode({
   searchFilter,
   onCopyPath,
   onInsertPath,
+  onPreviewFile,
   copiedPath
 }: TreeNodeProps) {
   const { t } = useLanguage();
