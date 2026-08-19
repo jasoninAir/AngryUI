@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const ClientMsgSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('chat:subscribe'), conversationId: z.string() }),
+  z.object({ type: z.literal('chat:subscribe'), conversationId: z.string() }).strict(),
   z.object({
     type: z.literal('chat:send'),
     conversationId: z.string(),
@@ -11,12 +11,12 @@ export const ClientMsgSchema = z.discriminatedUnion('type', [
       effort: z.enum(['low', 'medium', 'high']).optional(),
       workspace: z.string().optional(),
       // NOTE: dangerouslySkipPermissions intentionally ABSENT — server-controlled only
-    }),
-  }),
-  z.object({ type: z.literal('chat:unsubscribe'), conversationId: z.string() }),
-  z.object({ type: z.literal('chat:cancel'), conversationId: z.string() }),
-  z.object({ type: z.literal('chat:quota') }),
-  z.object({ type: z.literal('chat:set_status'), conversationId: z.string(), payload: z.object({ status: z.string() }) }),
+    }).strict(),
+  }).strict(),
+  z.object({ type: z.literal('chat:unsubscribe'), conversationId: z.string() }).strict(),
+  z.object({ type: z.literal('chat:cancel'), conversationId: z.string() }).strict(),
+  z.object({ type: z.literal('chat:quota') }).strict(),
+  z.object({ type: z.literal('chat:set_status'), conversationId: z.string(), payload: z.object({ status: z.string() }).strict() }).strict(),
 ]);
 
 export const ServerMsgSchema = z.discriminatedUnion('type', [

@@ -21,18 +21,15 @@ describe('dangerouslySkipPermissions bypass prevention', () => {
     (globalThis as any).__test_capturedOptions = null;
   });
 
-  it('server must not pass dangerouslySkipPermissions from client payload to TurnRunner', async () => {
+  it('server rejects messages with dangerouslySkipPermissions at entry point', async () => {
+    let messageHandler: ((data: Buffer) => void) | null = null;
     const fakeWs = {
       send: vi.fn(),
       readyState: 1, // OPEN
+      OPEN: 1, // WebSocket.OPEN constant
       on: vi.fn((event: string, handler: any) => {
         if (event === 'message') {
-          // Immediately trigger the handler with our test message
-          handler(JSON.stringify({
-            type: 'chat:send',
-            conversationId: 'test-conv',
-            payload: { message: 'hello', dangerouslySkipPermissions: true }
-          }));
+          messageHandler = handler;
         }
       }),
       close: vi.fn(),
@@ -41,9 +38,21 @@ describe('dangerouslySkipPermissions bypass prevention', () => {
 
     handleChatConnection(fakeWs, fakeIndex);
 
-    // Server MUST NOT forward dangerouslySkipPermissions to TurnRunner
+    // Manually trigger the message handler with invalid payload
+    messageHandler!(JSON.stringify({
+      type: 'chat:send',
+      conversationId: 'test-conv',
+      payload: { message: 'hello', dangerouslySkipPermissions: true }
+    }));
+
+    // Server MUST reject messages with unknown fields at schema validation
+    // The message is rejected before reaching TurnRunner
     const capturedOptions = (globalThis as any).__test_capturedOptions;
-    expect(capturedOptions).not.toBeNull();
-    expect(capturedOptions.dangerouslySkipPermissions).toBeUndefined();
+    expect(capturedOptions).toBeNull();
+
+    // Verify that a chat:error was sent back to the client
+    expect(fakeWs.send).toHaveBeenCalledWith(
+      expect.stringContaining('"type":"chat:error"')
+    );
   });
 });
