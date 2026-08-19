@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { Send, Square, Paperclip, X, FileText, Loader2, Camera, Upload } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { generateUUID } from '@/lib/uuid';
 import { getStoredToken } from '@/lib/auth';
 
@@ -85,6 +86,7 @@ export const ChatInput = forwardRef<
   }
 >(function ChatInput({ conversationId, onSend, onCancel, status }, ref) {
   const { t } = useLanguage();
+  const { isMobile } = useSidebar();
   const [text, setText] = useState('');
   const [stagedFiles, setStagedFiles] = useState<StagedAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -330,9 +332,11 @@ export const ChatInput = forwardRef<
             type="button"
             onClick={() => setShowAttachmentMenu((v) => !v)}
             title={t('uploadAttachmentTooltip')}
-            className="h-11 w-10 flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            className={`flex items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer ${
+              isMobile ? 'h-9 w-8' : 'h-11 w-10'
+            }`}
           >
-            <Paperclip className="w-4 h-4" />
+            <Paperclip className={isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
           </button>
 
           {showAttachmentMenu && (
@@ -370,37 +374,45 @@ export const ChatInput = forwardRef<
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKey}
           onPaste={handlePaste}
-          placeholder={t('inputPlaceholder')}
+          placeholder={isMobile ? (t('inputPlaceholderMobile') || t('inputPlaceholder').split('(')[0].trim()) : t('inputPlaceholder')}
           rows={1}
           aria-label="Chat message input"
           aria-live="polite"
-          className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 min-h-[44px] max-h-[40vh] leading-relaxed transition-[height] duration-75"
+          className={`flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 max-h-[40vh] leading-relaxed transition-[height] duration-75 ${
+            isMobile ? 'min-h-[36px]' : 'min-h-[44px]'
+          }`}
         />
 
         {/* Send / Stop / Uploading Button */}
         {status === 'RUNNING' ? (
           <button
             onClick={onCancel}
-            className="h-11 px-4 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 cursor-pointer"
+            className={`rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center text-xs font-medium transition-colors shrink-0 cursor-pointer ${
+              isMobile ? 'h-9 w-9' : 'h-11 px-4 gap-1.5'
+            }`}
+            title={t('stop')}
           >
             <Square className="w-3.5 h-3.5 fill-current" />
-            <span>{t('stop')}</span>
+            {!isMobile && <span>{t('stop')}</span>}
           </button>
         ) : (
           <button
             onClick={handleSubmit}
             disabled={(!text.trim() && stagedFiles.length === 0) || isUploading}
-            className="h-11 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 flex items-center gap-1.5 text-xs font-medium transition-colors shrink-0 shadow-sm cursor-pointer"
+            className={`rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 flex items-center justify-center text-xs font-medium transition-colors shrink-0 shadow-sm cursor-pointer ${
+              isMobile ? 'h-9 w-9' : 'h-11 px-4 gap-1.5'
+            }`}
+            title={t('send')}
           >
             {isUploading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>{t('uploading')}</span>
+                {!isMobile && <span>{t('uploading')}</span>}
               </>
             ) : (
               <>
                 <Send className="w-3.5 h-3.5" />
-                <span>{t('send')}</span>
+                {!isMobile && <span>{t('send')}</span>}
               </>
             )}
           </button>

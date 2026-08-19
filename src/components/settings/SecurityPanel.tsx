@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { getStoredToken } from '@/lib/auth';
+import { authFetch } from '@/lib/api';
 
 export function SecurityPanel() {
   const { t } = useLanguage();
@@ -11,7 +11,7 @@ export function SecurityPanel() {
   const handleSave = async () => {
     setStatus('saving');
     try {
-      const res = await fetch('/api/settings/token', {
+      const res = await authFetch('/api/settings/token', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token })

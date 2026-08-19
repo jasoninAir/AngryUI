@@ -90,6 +90,7 @@ export const translations = {
 
     // Chat Input & Attachments
     inputPlaceholder: 'Type a message... (Enter to send, Shift+Enter for newline, supports paste/drag files)',
+    inputPlaceholderMobile: 'Type a message...',
     send: 'Send',
     stop: 'Stop',
     uploading: 'Uploading...',
@@ -221,6 +222,7 @@ export const translations = {
 
     // Chat Input & Attachments
     inputPlaceholder: '输入消息... (Enter 发送, Shift+Enter 换行, 支持直接粘贴/拖拽文件)',
+    inputPlaceholderMobile: '输入消息...',
     send: '发送',
     stop: '停止',
     uploading: '上传中...',
@@ -351,6 +353,7 @@ export const translations = {
 
     // Chat Input & Attachments
     inputPlaceholder: '輸入訊息... (Enter 發送, Shift+Enter 換行, 支援直接貼上/拖曳檔案)',
+    inputPlaceholderMobile: '輸入訊息...',
     send: '發送',
     stop: '停止',
     uploading: '上傳中...',
@@ -481,6 +484,7 @@ export const translations = {
 
     // Chat Input & Attachments
     inputPlaceholder: 'メッセージを入力... (Enter で送信, Shift+Enter で改行, 貼り付けやドラッグ対応)',
+    inputPlaceholderMobile: 'メッセージを入力...',
     send: '送信',
     stop: '停止',
     uploading: 'アップロード中...',
@@ -611,6 +615,7 @@ export const translations = {
 
     // Chat Input & Attachments
     inputPlaceholder: 'Escriba un mensaje... (Enter para enviar, Shift+Enter para salto de línea, soporta pegar/arrastrar)',
+    inputPlaceholderMobile: 'Escriba un mensaje...',
     send: 'Enviar',
     stop: 'Detener',
     uploading: 'Subiendo...',

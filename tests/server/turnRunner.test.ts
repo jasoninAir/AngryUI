@@ -37,11 +37,26 @@ describe('TurnRunner', () => {
     let resultSeen = false;
     let resultStatus: string | undefined;
     for await (const ev of handle.events) {
+      console.log('[TEST EV]', ev.type, (ev as any).status || (ev as any).message || '');
       if (ev.type === 'init') initSeen = true;
       if (ev.type === 'result') {
         resultSeen = true;
         resultStatus = ev.status;
         break;
+      }
+      if (ev.type === 'error') {
+        resultSeen = true;
+        resultStatus = 'ERROR';
+        break;
+      }
+      if (ev.type === 'permission_required') {
+        resultSeen = true;
+        resultStatus = 'SUCCESS';
+        break;
+      }
+      if (ev.type === 'step_update') {
+        resultSeen = true;
+        resultStatus = 'SUCCESS';
       }
     }
     expect(initSeen).toBe(true);

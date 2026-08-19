@@ -411,12 +411,12 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
           )}
 
           {/* Permission Mode Toggle Bar (Positioned right above textarea at bottom) */}
-          <div className="px-3 py-1.5 bg-card/40 border-t border-border flex items-center justify-between text-xs text-muted-foreground select-none shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="px-3 py-1.5 bg-card/40 border-t border-border flex items-center justify-between gap-2 text-xs text-muted-foreground select-none shrink-0 overflow-hidden">
+            <div className="flex items-center gap-1.5 min-w-0 shrink-0">
               <button
                 onClick={toggleAutoApprove}
                 title={autoApprove ? t('safeModeDesc') : t('autoApproveDesc')}
-                className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
                   autoApprove
                     ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 shadow-xs'
                     : 'bg-muted/80 border-border text-foreground hover:bg-accent'
@@ -424,26 +424,26 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
               >
                 {autoApprove ? (
                   <>
-                    <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    <span>{t('autoApproveMode')}</span>
+                    <Zap className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                    <span className="whitespace-nowrap">{t('autoApproveMode')}</span>
                   </>
                 ) : (
                   <>
-                    <Shield className="w-3 h-3 text-emerald-500" />
-                    <span>{t('safeMode')}</span>
+                    <Shield className="w-3 h-3 text-emerald-500 shrink-0" />
+                    <span className="whitespace-nowrap">{t('safeMode')}</span>
                   </>
                 )}
               </button>
-              <span className="text-[10px] text-muted-foreground/80 hidden sm:inline">
+              <span className="text-[10px] text-muted-foreground/80 hidden md:inline truncate">
                 {autoApprove ? t('autoApproveDesc') : t('safeModeDesc')}
               </span>
             </div>
 
             <Link
               to="/settings"
-              className="text-[11px] hover:text-foreground flex items-center gap-1 hover:underline text-muted-foreground"
+              className="text-[11px] hover:text-foreground flex items-center gap-1 hover:underline text-muted-foreground shrink-0 ml-auto whitespace-nowrap"
             >
-              <SlidersHorizontal className="w-3 h-3" />
+              <SlidersHorizontal className="w-3 h-3 shrink-0" />
               <span>{t('whitelistRules')}</span>
             </Link>
           </div>
