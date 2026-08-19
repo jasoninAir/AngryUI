@@ -73,6 +73,3 @@ coverage/
 .claude/
 .antigravity/
 .system_generated/
-
-# Documentation (local only)
-docs/
