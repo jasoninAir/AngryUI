@@ -11,6 +11,10 @@ import { createProjectsRouter } from './routes/projects';
 import { createSettingsRouter } from './routes/settings';
 import { createUploadRouter } from './routes/upload';
 import { createAuthRouter } from './routes/auth';
+import { createSubagentsRouter } from './routes/subagents';
+import { createArtifactsRouter } from './routes/artifacts';
+import { createSkillsRouter } from './routes/skills';
+import { createMcpRouter } from './routes/mcp';
 import path from 'path';
 import fs from 'fs';
 import { DiscoveryService } from './services/discoveryService';
@@ -88,6 +92,10 @@ const uploadLimiter = rateLimit({
 app.use('/api', createProjectsRouter(index));
 app.use('/api', createSettingsRouter());
 app.use('/api', uploadLimiter, createUploadRouter());
+app.use('/api', createSubagentsRouter());
+app.use('/api', createArtifactsRouter());
+app.use('/api', createSkillsRouter());
+app.use('/api', createMcpRouter());
 
 // Global structured error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {

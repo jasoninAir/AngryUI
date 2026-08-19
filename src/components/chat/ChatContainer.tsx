@@ -5,7 +5,7 @@ import { useSidebar } from '@/context/SidebarContext';
 import { useSessionStatus } from '@/context/SessionStatusContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { SUPPORTED_MODELS, getModelConfig, EffortLevel } from '@/lib/models';
-import { authFetch } from '@/lib/api';
+import { authFetch, fetchConversationSubagents, fetchConversationArtifacts } from '@/lib/api';
 import { findDangerMatches } from '@/lib/dangerCommands';
 import { MessageList } from './MessageList';
 import { ChatInput, ChatInputHandle } from './ChatInput';
@@ -14,6 +14,8 @@ import { PermissionCard } from './PermissionCard';
 import { QuotaModal } from '../quota/QuotaModal';
 import { WhitelistModal } from '../whitelist/WhitelistModal';
 import { CodePreviewModal } from '../common/CodePreviewModal';
+import { SubagentTopologyModal } from '../subagents/SubagentTopologyModal';
+import { ArtifactsDrawer } from '../artifacts/ArtifactsDrawer';
 import { addTemporaryRule, isTemporarilyAllowed } from '@/lib/tempWhitelist';
 import {
   Folder,
@@ -28,6 +30,8 @@ import {
   SlidersHorizontal,
   FolderTree,
   Gauge,
+  Network,
+  Sparkles,
   X
 } from 'lucide-react';
 
@@ -45,6 +49,10 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   const { t } = useLanguage();
   const [workspace, setWorkspace] = useState<string | undefined>(workspaceParam);
   const [showFileExplorer, setShowFileExplorer] = useState<boolean>(false);
+  const [showSubagentModal, setShowSubagentModal] = useState<boolean>(false);
+  const [showArtifactsDrawer, setShowArtifactsDrawer] = useState<boolean>(false);
+  const [subagentCount, setSubagentCount] = useState<number>(0);
+  const [artifactCount, setArtifactCount] = useState<number>(0);
   const chatInputRef = useRef<ChatInputHandle>(null);
 
   // Risk control mode: default false (Protected / Safe Mode)
@@ -140,6 +148,33 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         .catch(() => {});
     }
   }, [conversationId, workspace]);
+
+  // Periodic counts for Subagents and Artifacts
+  useEffect(() => {
+    if (!conversationId) return;
+    let mounted = true;
+
+    const checkCounts = () => {
+      fetchConversationSubagents(conversationId)
+        .then((res) => {
+          if (mounted) setSubagentCount(res.subagents?.length || 0);
+        })
+        .catch(() => {});
+
+      fetchConversationArtifacts(conversationId)
+        .then((res) => {
+          if (mounted) setArtifactCount(res.artifacts?.length || 0);
+        })
+        .catch(() => {});
+    };
+
+    checkCounts();
+    const interval = setInterval(checkCounts, 6000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [conversationId, status]);
 
   const handleInsertPath = (relPath: string) => {
     chatInputRef.current?.insertSnippet(`@${relPath}`);
@@ -318,6 +353,44 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             <span className="hidden sm:inline">{t('quotaTab')}</span>
           </button>
 
+          {/* Subagents Topology Button (P2-1) */}
+          <button
+            onClick={() => setShowSubagentModal(true)}
+            title={t('subagentTopologyTitle')}
+            className={`text-xs border rounded-md p-1.5 sm:px-2.5 sm:py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
+              subagentCount > 0
+                ? 'bg-primary/10 border-primary/40 text-primary font-medium hover:bg-primary/20'
+                : 'text-muted-foreground hover:text-foreground border-border hover:bg-accent'
+            }`}
+          >
+            <Network className="w-3.5 h-3.5 text-primary" />
+            <span className="hidden sm:inline">{t('subagentsTab')}</span>
+            {subagentCount > 0 && (
+              <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.2 rounded-full font-mono font-bold">
+                {subagentCount}
+              </span>
+            )}
+          </button>
+
+          {/* Artifacts Drawer Button (P2-2) */}
+          <button
+            onClick={() => setShowArtifactsDrawer(true)}
+            title={t('artifactsDrawerTitle')}
+            className={`text-xs border rounded-md p-1.5 sm:px-2.5 sm:py-1 flex items-center gap-1.5 transition-colors cursor-pointer ${
+              artifactCount > 0
+                ? 'bg-purple-500/10 border-purple-500/40 text-purple-600 dark:text-purple-300 font-medium hover:bg-purple-500/20'
+                : 'text-muted-foreground hover:text-foreground border-border hover:bg-accent'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+            <span className="hidden sm:inline">{t('artifactsTab')}</span>
+            {artifactCount > 0 && (
+              <span className="text-[10px] bg-purple-500 text-white px-1.5 py-0.2 rounded-full font-mono font-bold">
+                {artifactCount}
+              </span>
+            )}
+          </button>
+
           {/* Open WebTTY Button */}
           <button
             onClick={() => setShowTty(true)}
@@ -477,6 +550,21 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         workspace={workspace}
         onClose={() => setInspectingFile(null)}
         onInsertReference={(refText) => chatInputRef.current?.insertSnippet(refText)}
+      />
+
+      {/* Subagent Topology Visualizer (P2-1) */}
+      <SubagentTopologyModal
+        isOpen={showSubagentModal}
+        conversationId={conversationId}
+        onClose={() => setShowSubagentModal(false)}
+      />
+
+      {/* Artifacts Drawer (P2-2) */}
+      <ArtifactsDrawer
+        isOpen={showArtifactsDrawer}
+        conversationId={conversationId}
+        onClose={() => setShowArtifactsDrawer(false)}
+        onFileClick={(path, startLine, endLine) => setInspectingFile({ path, startLine, endLine })}
       />
     </div>
   );

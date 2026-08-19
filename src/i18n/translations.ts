@@ -200,7 +200,55 @@ export const translations = {
     linesCount: 'lines',
     fileTruncatedWarning: 'File truncated (showing first 2MB)',
     selectedRange: 'Selected:',
-    clearSelection: 'Clear'
+    clearSelection: 'Clear',
+
+    // Phase 3 — Subagents Topology
+    subagentTopologyTitle: 'Subagent Swarm Topology',
+    subagentTopologyDesc: 'Real-time multi-agent orchestration and status monitoring',
+    activeSubagents: 'Subagents',
+    subagentsTab: 'Subagents',
+    viewTranscript: 'Transcript',
+    steps: 'steps',
+    noSubagentsSpawned: 'No Subagents Spawned',
+    noSubagentsHint: 'When tasks require parallel subagents (e.g. invoke_subagent), their live orchestration nodes and execution logs will appear here.',
+    transcript: 'Trajectory Transcript',
+    loadingTranscript: 'Loading subagent trajectory...',
+    noTranscriptSteps: 'No execution steps recorded yet.',
+    subagentThought: 'Reasoning & Thoughts',
+
+    // Phase 3 — Artifacts Drawer
+    artifactsDrawerTitle: 'Artifacts Presentation & Inspector',
+    artifactsDrawerDesc: 'Immersive markdown viewer with multi-slide carousel, mermaid diagrams, and diffs',
+    artifactsTab: 'Artifacts',
+    loadingArtifact: 'Loading artifact document...',
+    noArtifactsInSession: 'No Artifacts Found in this Session',
+    noArtifactsHint: 'Documents and presentations written to brain/ will be automatically rendered here.',
+    prevSlide: 'Previous',
+    nextSlide: 'Next',
+
+    // Phase 3 — Skills & Rules
+    skillsAndRulesTitle: 'Skills & Rules Manager',
+    skillsAndRulesDesc: 'Manage, toggle, and hot-reload Antigravity skills, plugins, and system prompt rules',
+    hotReloadSkills: 'Hot Reload Skills',
+    allSkills: 'All Skills',
+    plugins: 'Plugins',
+    customSkills: 'Custom',
+    builtin: 'Builtin',
+    systemRules: 'Rules',
+    searchSkills: 'Search skills, rules, triggers...',
+    loadingSkills: 'Scanning skills and rules...',
+    noSkillsFound: 'No matching skills found',
+    noRulesFound: 'No rules defined',
+
+    // Phase 3 — MCP Inspector
+    mcpInspectorTitle: 'MCP Server Inspector',
+    mcpInspectorDesc: 'Inspect Model Context Protocol server tools, resources, and connectivity',
+    loadingMcpServers: 'Loading MCP servers...',
+    noMcpServersConfigured: 'No MCP Servers Configured',
+    noMcpServersHint: 'Configure MCP servers in ~/.gemini/config/mcp_config.json or ~/.gemini/antigravity-cli/mcp/',
+    testPing: 'Test Ping',
+    availableTools: 'Available Tools',
+    noToolsDefinedInSchema: 'No tools defined in schema'
   },
 
   'zh-CN': {
@@ -387,7 +435,55 @@ export const translations = {
     linesCount: '行',
     fileTruncatedWarning: '文件过大，已截断展示前 2MB 内容',
     selectedRange: '已选行号：',
-    clearSelection: '清除选择'
+    clearSelection: '清除选择',
+
+    // Phase 3 — Subagents Topology
+    subagentTopologyTitle: 'Subagents 协同拓扑图',
+    subagentTopologyDesc: '实时多智能体派发关系与生命周期状态监控',
+    activeSubagents: '个子智能体',
+    subagentsTab: '子智能体',
+    viewTranscript: '查看过程',
+    steps: '步操作',
+    noSubagentsSpawned: '当前会话未派发子智能体',
+    noSubagentsHint: '当任务涉及多 Agent 并行调度（如 invoke_subagent）时，此处将实时展示各子智能体的派发关系与运行日志。',
+    transcript: '运行轨迹日志',
+    loadingTranscript: '正在加载子智能体轨迹...',
+    noTranscriptSteps: '暂无执行轨迹记录。',
+    subagentThought: '思考与推理链',
+
+    // Phase 3 — Artifacts Drawer
+    artifactsDrawerTitle: 'Artifacts 交付物与幻灯片',
+    artifactsDrawerDesc: '沉浸式 Markdown 交付文档浏览、多 Slide 幻灯片演示、Mermaid 图谱与代码对比',
+    artifactsTab: '交付物',
+    loadingArtifact: '正在加载交付物文档...',
+    noArtifactsInSession: '当前会话暂无生成的交付物',
+    noArtifactsHint: '智能体生成的结构化方案、技术规范或多 Slide 报告将在此沉浸式展示。',
+    prevSlide: '上一页',
+    nextSlide: '下一页',
+
+    // Phase 3 — Skills & Rules
+    skillsAndRulesTitle: '技能与规则管理',
+    skillsAndRulesDesc: '管理、开关与热载 Antigravity CLI 技能扩展、插件以及系统提示词规则',
+    hotReloadSkills: '热重载技能库',
+    allSkills: '全部技能',
+    plugins: '插件技能',
+    customSkills: '自定义技能',
+    builtin: '内置',
+    systemRules: '系统规则',
+    searchSkills: '搜索技能名称、描述或触发词...',
+    loadingSkills: '正在扫描技能与规则库...',
+    noSkillsFound: '未找到匹配的技能',
+    noRulesFound: '未配置系统规则',
+
+    // Phase 3 — MCP Inspector
+    mcpInspectorTitle: 'MCP 协议服务巡检器',
+    mcpInspectorDesc: '巡检当前配置的 MCP 工具集、参数 Schema 与服务连通性',
+    loadingMcpServers: '正在加载 MCP 服务配置...',
+    noMcpServersConfigured: '暂无配置 MCP 服务',
+    noMcpServersHint: '可在 ~/.gemini/config/mcp_config.json 或 ~/.gemini/antigravity-cli/mcp/ 中添加 MCP 服务。',
+    testPing: '连通性测试',
+    availableTools: '可用工具集',
+    noToolsDefinedInSchema: '此服务暂无工具定义'
   },
 
   'zh-TW': {
@@ -574,7 +670,55 @@ export const translations = {
     linesCount: '行',
     fileTruncatedWarning: '檔案過大，已截斷展示前 2MB 內容',
     selectedRange: '已選行號：',
-    clearSelection: '清除選擇'
+    clearSelection: '清除選擇',
+
+    // Phase 3 — Subagents Topology
+    subagentTopologyTitle: 'Subagents 協同拓撲圖',
+    subagentTopologyDesc: '即時多智能體派發關係與生命週期狀態監控',
+    activeSubagents: '個子智能體',
+    subagentsTab: '子智能體',
+    viewTranscript: '查看過程',
+    steps: '步操作',
+    noSubagentsSpawned: '當前會話未派發子智能體',
+    noSubagentsHint: '當任務涉及多 Agent 並行調度（如 invoke_subagent）時，此處將即時展示各子智能體的派發關係與運行日誌。',
+    transcript: '運行軌跡日誌',
+    loadingTranscript: '正在載入子智能體軌跡...',
+    noTranscriptSteps: '暫無執行軌跡記錄。',
+    subagentThought: '思考與推理鏈',
+
+    // Phase 3 — Artifacts Drawer
+    artifactsDrawerTitle: 'Artifacts 交付物與投影片',
+    artifactsDrawerDesc: '沉浸式 Markdown 交付文件瀏覽、多 Slide 投影片演示、Mermaid 圖譜與程式碼對比',
+    artifactsTab: '交付物',
+    loadingArtifact: '正在載入交付物文件...',
+    noArtifactsInSession: '當前會話暫無產生的交付物',
+    noArtifactsHint: '智能體產生的結構化方案、技術規格或多 Slide 報告將在此沉浸式展示。',
+    prevSlide: '上一頁',
+    nextSlide: '下一頁',
+
+    // Phase 3 — Skills & Rules
+    skillsAndRulesTitle: '技能與規則管理',
+    skillsAndRulesDesc: '管理、開關與熱載 Antigravity CLI 技能擴展、外掛程式以及系統提示詞規則',
+    hotReloadSkills: '熱重載技能庫',
+    allSkills: '全部技能',
+    plugins: '外掛程式技能',
+    customSkills: '自訂技能',
+    builtin: '內建',
+    systemRules: '系統規則',
+    searchSkills: '搜尋技能名稱、描述或觸發詞...',
+    loadingSkills: '正在掃描技能與規則庫...',
+    noSkillsFound: '未找到符合的技能',
+    noRulesFound: '未設定系統規則',
+
+    // Phase 3 — MCP Inspector
+    mcpInspectorTitle: 'MCP 協議服務巡檢器',
+    mcpInspectorDesc: '巡檢當前設定的 MCP 工具集、參數 Schema 與服務連通性',
+    loadingMcpServers: '正在載入 MCP 服務設定...',
+    noMcpServersConfigured: '暫無設定 MCP 服務',
+    noMcpServersHint: '可在 ~/.gemini/config/mcp_config.json 或 ~/.gemini/antigravity-cli/mcp/ 中新增 MCP 服務。',
+    testPing: '連通性測試',
+    availableTools: '可用工具集',
+    noToolsDefinedInSchema: '此服務暫無工具定義'
   },
 
   ja: {
@@ -761,7 +905,55 @@ export const translations = {
     linesCount: '行',
     fileTruncatedWarning: 'ファイルサイズが大きいため先頭 2MB を表示しています',
     selectedRange: '選択中の行：',
-    clearSelection: '選択解除'
+    clearSelection: '選択解除',
+
+    // Phase 3 — Subagents Topology
+    subagentTopologyTitle: 'サブエージェント協調トポロジー',
+    subagentTopologyDesc: 'リアルタイムマルチエージェント協調とステータス監視',
+    activeSubagents: '件のサブエージェント',
+    subagentsTab: 'サブエージェント',
+    viewTranscript: 'ログ確認',
+    steps: 'ステップ',
+    noSubagentsSpawned: 'サブエージェントは起動されていません',
+    noSubagentsHint: '並行サブエージェントが呼び出されると、トポロジーとログがここに表示されます。',
+    transcript: '実行ログ',
+    loadingTranscript: 'ログを読み込み中...',
+    noTranscriptSteps: '実行ステップはまだありません。',
+    subagentThought: '推論と思考',
+
+    // Phase 3 — Artifacts Drawer
+    artifactsDrawerTitle: '成果物とスライドプレゼンテーション',
+    artifactsDrawerDesc: 'スライドプレゼンテーション、Mermaid図、差分対応のMarkdownビューアー',
+    artifactsTab: '成果物',
+    loadingArtifact: '成果物を読み込み中...',
+    noArtifactsInSession: 'このセッションには成果物がありません',
+    noArtifactsHint: '生成されたMarkdownドキュメントやスライドがここに表示されます。',
+    prevSlide: '前へ',
+    nextSlide: '次へ',
+
+    // Phase 3 — Skills & Rules
+    skillsAndRulesTitle: 'スキル＆ルール管理',
+    skillsAndRulesDesc: 'スキル、プラグイン、ルール設定の管理とホットリロード',
+    hotReloadSkills: 'スキルを再読み込み',
+    allSkills: 'すべてのスキル',
+    plugins: 'プラグイン',
+    customSkills: 'カスタム',
+    builtin: '組み込み',
+    systemRules: 'ルール',
+    searchSkills: 'スキルやルールを検索...',
+    loadingSkills: 'スキルをスキャン中...',
+    noSkillsFound: '一致するスキルが見つかりません',
+    noRulesFound: 'ルールが設定されていません',
+
+    // Phase 3 — MCP Inspector
+    mcpInspectorTitle: 'MCP サーバーインスペクター',
+    mcpInspectorDesc: 'MCP サーバー、ツール、スキーマおよび接続状況の確認',
+    loadingMcpServers: 'MCP サーバーを読み込み中...',
+    noMcpServersConfigured: 'MCP サーバーが設定されていません',
+    noMcpServersHint: '~/.gemini/config/mcp_config.json で MCP サーバーを追加できます。',
+    testPing: 'Ping テスト',
+    availableTools: '利用可能なツール',
+    noToolsDefinedInSchema: 'ツールが定義されていません'
   },
 
   es: {
@@ -948,7 +1140,55 @@ export const translations = {
     linesCount: 'líneas',
     fileTruncatedWarning: 'Archivo truncado (mostrando los primeros 2MB)',
     selectedRange: 'Líneas seleccionadas:',
-    clearSelection: 'Limpiar'
+    clearSelection: 'Limpiar',
+
+    // Phase 3 — Subagents Topology
+    subagentTopologyTitle: 'Topología de Subagentes',
+    subagentTopologyDesc: 'Orquestación y monitoreo de subagentes en tiempo real',
+    activeSubagents: 'subagentes',
+    subagentsTab: 'Subagentes',
+    viewTranscript: 'Ver Transcript',
+    steps: 'pasos',
+    noSubagentsSpawned: 'No se han generado subagentes',
+    noSubagentsHint: 'Cuando se invocan subagentes paralelos, su topología y registros aparecerán aquí.',
+    transcript: 'Registro de Ejecución',
+    loadingTranscript: 'Cargando registro del subagente...',
+    noTranscriptSteps: 'No hay pasos de ejecución registrados.',
+    subagentThought: 'Cadena de Pensamiento',
+
+    // Phase 3 — Artifacts Drawer
+    artifactsDrawerTitle: 'Inspector de Artefactos y Presentación',
+    artifactsDrawerDesc: 'Visor inmersivo de Markdown con diapositivas, diagramas mermaid y diffs',
+    artifactsTab: 'Artefactos',
+    loadingArtifact: 'Cargando artefacto...',
+    noArtifactsInSession: 'No se encontraron artefactos en esta sesión',
+    noArtifactsHint: 'Los documentos y presentaciones generados se renderizarán aquí.',
+    prevSlide: 'Anterior',
+    nextSlide: 'Siguiente',
+
+    // Phase 3 — Skills & Rules
+    skillsAndRulesTitle: 'Gestor de Habilidades y Reglas',
+    skillsAndRulesDesc: 'Administre, active y recargue habilidades, complementos y reglas',
+    hotReloadSkills: 'Recargar Habilidades',
+    allSkills: 'Todas',
+    plugins: 'Complementos',
+    customSkills: 'Personalizadas',
+    builtin: 'Integradas',
+    systemRules: 'Reglas',
+    searchSkills: 'Buscar habilidades o reglas...',
+    loadingSkills: 'Escaneando habilidades y reglas...',
+    noSkillsFound: 'No se encontraron habilidades coincidentes',
+    noRulesFound: 'No hay reglas configuradas',
+
+    // Phase 3 — MCP Inspector
+    mcpInspectorTitle: 'Inspector de Servidores MCP',
+    mcpInspectorDesc: 'Inspeccione herramientas, esquemas y conectividad de servidores MCP',
+    loadingMcpServers: 'Cargando servidores MCP...',
+    noMcpServersConfigured: 'No hay servidores MCP configurados',
+    noMcpServersHint: 'Configure servidores MCP en ~/.gemini/config/mcp_config.json',
+    testPing: 'Probar Ping',
+    availableTools: 'Herramientas Disponibles',
+    noToolsDefinedInSchema: 'No hay herramientas definidas'
   }
 };
 
