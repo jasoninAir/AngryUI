@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { SessionStatusProvider } from './context/SessionStatusContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -122,10 +122,17 @@ function HomePage() {
   );
 }
 
-function AppContent() {
-  const { isAuthenticated, isChecking, login } = useAuth();
+function RedirectToChat() {
+  const { conversationId } = useParams();
+  const [searchParams] = useSearchParams();
+  const search = searchParams.toString();
+  return <Navigate to={`/chat/${conversationId}${search ? `?${search}` : ''}`} replace />;
+}
 
-  if (isChecking) {
+export function AppContent() {
+  const { isAuthenticated, isVerifying, login } = useAuth();
+
+  if (isVerifying) {
     return (
       <div className="flex h-full h-[100dvh] w-full items-center justify-center bg-background">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -154,8 +161,8 @@ function AppContent() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/chat/:conversationId" element={<ChatPage />} />
-              <Route path="/c/:conversationId" element={<ChatPage />} />
-              <Route path="/session/:conversationId" element={<ChatPage />} />
+              <Route path="/c/:conversationId" element={<RedirectToChat />} />
+              <Route path="/session/:conversationId" element={<RedirectToChat />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

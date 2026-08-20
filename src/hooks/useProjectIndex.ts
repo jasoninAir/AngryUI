@@ -33,6 +33,11 @@ export function useProjectIndex() {
   useEffect(() => {
     refresh(false);
 
+    const handleDiscovery = () => {
+      refresh(false);
+    };
+    window.addEventListener('angryui:session_discovery', handleDiscovery);
+
     const onVisibilityChange = () => {
       if (!document.hidden) {
         refresh(false);
@@ -44,9 +49,10 @@ export function useProjectIndex() {
       if (!document.hidden) {
         refresh(false);
       }
-    }, 5000);
+    }, 10000);
 
     return () => {
+      window.removeEventListener('angryui:session_discovery', handleDiscovery);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       clearInterval(id);
     };

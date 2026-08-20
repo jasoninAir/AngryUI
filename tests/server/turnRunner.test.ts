@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { TurnRunner, formatAgyModel } from '../../server/services/turnRunner';
 import { ConversationIndex } from '../../server/db/conversationIndex';
+import { fromFileUri } from '../../server/utils/workspacePath';
 
 describe('TurnRunner', () => {
   let testConversationId: string;
+  let testWorkspace: string;
 
   beforeAll(() => {
     const idx = new ConversationIndex();
@@ -13,6 +15,7 @@ describe('TurnRunner', () => {
       throw new Error('No conversations in AGY storage—run an `agy` session first.');
     }
     testConversationId = all[0].conversation_id;
+    testWorkspace = fromFileUri(all[0].workspace_uris[0] || process.cwd());
   });
 
   it('formatAgyModel correctly formats model and effort for CLI', () => {
@@ -24,13 +27,33 @@ describe('TurnRunner', () => {
     expect(formatAgyModel('Gemini 2.5 Flash')).toBe('Gemini 2.5 Flash (High)');
   });
 
+  it('refuses to spawn without valid cwd', () => {
+    const runner = new TurnRunner();
+    expect(() =>
+      runner.spawn({
+        conversationId: 'test-no-cwd',
+        message: 'test',
+        cwd: undefined
+      })
+    ).toThrow('Workspace path is required');
+
+    expect(() =>
+      runner.spawn({
+        conversationId: 'test-invalid-cwd',
+        message: 'test',
+        cwd: '/path/does/not/exist/9999'
+      })
+    ).toThrow('does not exist or is not a directory');
+  });
+
   it('spawns agy and receives init event', async () => {
     const runner = new TurnRunner();
     const handle = runner.spawn({
       conversationId: testConversationId,
       message: 'say hi',
       model: 'Gemini 3.7 Flash',
-      effort: 'low'
+      effort: 'low',
+      cwd: testWorkspace
     });
 
     let initSeen = false;
@@ -69,7 +92,8 @@ describe('TurnRunner', () => {
       conversationId: testConversationId,
       message: 'long task',
       model: 'Gemini 3.7 Flash',
-      effort: 'high'
+      effort: 'high',
+      cwd: testWorkspace
     });
 
     setTimeout(() => handle.abort(), 1000);

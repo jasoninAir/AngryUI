@@ -97,6 +97,8 @@ export function SessionStatusProvider({ children }: { children: React.ReactNode 
         return { ...prev, [convId]: 'WAITING_INPUT' };
       });
       prevStatusesRef.current[convId] = 'WAITING_INPUT';
+    } else if (lastMessage.type === 'session:upsert' || lastMessage.type === 'session:remove') {
+      window.dispatchEvent(new CustomEvent('angryui:session_discovery', { detail: lastMessage }));
     }
   }, [lastMessage]);
 

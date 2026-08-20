@@ -42,7 +42,7 @@ describe('dangerouslySkipPermissions in chatHandler', () => {
     messageHandler!(JSON.stringify({
       type: 'chat:send',
       conversationId: 'test-conv',
-      payload: { message: 'hello', dangerouslySkipPermissions: true }
+      payload: { message: 'hello', workspace: process.cwd(), dangerouslySkipPermissions: true }
     }));
 
     // Wait for async event processing

@@ -10,7 +10,13 @@ export function attachWsServer(
   token: string | null,
   index: ConversationIndex
 ): WebSocketServer {
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    handleProtocols: (protocols) => {
+      if (protocols.has('bearer')) return 'bearer';
+      return false;
+    }
+  });
 
   httpServer.on('upgrade', (req, socket, head) => {
     if (!req.url?.startsWith('/ws')) {
@@ -63,4 +69,15 @@ export function attachWsServer(
   });
 
   return wss;
+}
+
+export function broadcastWsMessage(wss: WebSocketServer, msg: any): void {
+  const str = JSON.stringify(msg);
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(str);
+      } catch {}
+    }
+  });
 }

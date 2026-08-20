@@ -104,41 +104,37 @@ function reducer(state: State, action: Action): State {
       }
       if (ev.type === 'step_update') {
         if (ev.step_type === 'agent_response' && ev.text_delta) {
-          const last = state.messages[state.messages.length - 1];
+          const msgs = state.messages;
+          const last = msgs[msgs.length - 1];
           if (last?.role === 'assistant') {
-            const updated = [...state.messages];
+            const updated = msgs.slice();
             updated[updated.length - 1] = { ...last, text: last.text + ev.text_delta };
             return { ...state, messages: updated };
           } else {
             return {
               ...state,
-              messages: [
-                ...state.messages,
-                { id: generateUUID(), role: 'assistant', text: ev.text_delta }
-              ]
+              messages: msgs.concat({ id: generateUUID(), role: 'assistant', text: ev.text_delta })
             };
           }
         }
         if (ev.step_type === 'tool' && ev.tool_name) {
           return {
             ...state,
-            messages: [
-              ...state.messages,
-              {
-                id: generateUUID(),
-                role: 'tool',
-                name: ev.tool_name,
-                input: ev.tool_info?.parameters ?? {},
-                output: ev.tool_info?.output ?? ''
-              }
-            ]
+            messages: state.messages.concat({
+              id: generateUUID(),
+              role: 'tool',
+              name: ev.tool_name,
+              input: ev.tool_info?.parameters ?? {},
+              output: ev.tool_info?.output ?? ''
+            })
           };
         }
       }
       if (ev.type === 'result') {
-        const last = state.messages[state.messages.length - 1];
+        const msgs = state.messages;
+        const last = msgs[msgs.length - 1];
         if (last?.role === 'assistant' && !last.text && ev.response) {
-          const updated = [...state.messages];
+          const updated = msgs.slice();
           updated[updated.length - 1] = { ...last, text: ev.response };
           return { ...state, messages: updated };
         }
@@ -179,10 +175,16 @@ export function useConversation(conversationId: string) {
   const [hasMoreHistory, setHasMoreHistory] = useState<boolean>(initialCached?.hasMoreHistory ?? true);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  const lastSeqRef = useRef<number>(0);
+
   // Direct synchronous WebSocket message handler
   const handleWsMessage = useCallback((msg: WSMessage) => {
     if (!msg) return;
     if (msg.conversationId && msg.conversationId !== 'system' && msg.conversationId !== conversationIdRef.current) return;
+
+    if (msg.seq) {
+      lastSeqRef.current = Math.max(lastSeqRef.current, msg.seq);
+    }
 
     if (msg.type === 'session:status') {
       const nextState = msg.payload?.state || 'IDLE';
@@ -200,6 +202,20 @@ export function useConversation(conversationId: string) {
       dispatch({ type: 'interactive_prompt', active: false });
       dispatch({ type: 'permission_prompt', info: null });
       dispatch({ type: 'status', status: 'IDLE' });
+    } else if (msg.type === 'chat:buffer_truncated') {
+      // Buffer window was exceeded on server; backfill missing turns from history API
+      if (conversationIdRef.current) {
+        fetchConversationHistory(conversationIdRef.current, 5, 0)
+          .then((res) => {
+            if (res && res.messages) {
+              dispatch({ type: 'sync_latest_history', messages: res.messages as Message[] });
+              setLoadedTurns((prev) => Math.max(prev, res.loadedTurns));
+              setTotalTurns(res.totalTurns);
+              setHasMoreHistory(res.hasMore);
+            }
+          })
+          .catch(() => {});
+      }
     } else if (msg.type === 'chat:stream') {
       const ev = msg.payload;
       if (ev?.type === 'permission_required') {
@@ -242,7 +258,36 @@ export function useConversation(conversationId: string) {
     return `${proto}://${location.host}/ws`;
   }, []);
 
-  const { send, readyState } = useWebSocket(wsUrl(), handleWsMessage);
+  const sendRef = useRef<(msg: WSMessage) => void>(() => {});
+
+  const handleWsOpen = useCallback((isReconnect: boolean) => {
+    const convId = conversationIdRef.current;
+    if (!convId) return;
+
+    sendRef.current({
+      type: 'chat:subscribe',
+      conversationId: convId,
+      lastSeq: lastSeqRef.current,
+      timestamp: Date.now()
+    });
+
+    if (isReconnect) {
+      // Sync latest history in case turns occurred or finished while disconnected
+      fetchConversationHistory(convId, 5, 0)
+        .then((res) => {
+          if (conversationIdRef.current === convId && res && res.messages) {
+            dispatch({ type: 'sync_latest_history', messages: res.messages as Message[] });
+            setLoadedTurns((prev) => Math.max(prev, res.loadedTurns));
+            setTotalTurns(res.totalTurns);
+            setHasMoreHistory(res.hasMore);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const { send, readyState, rtt, quality, retryCount } = useWebSocket(wsUrl(), handleWsMessage, handleWsOpen);
+  sendRef.current = send;
 
   // Sync to global sessionCache only when state has messages or turns
   useEffect(() => {
@@ -259,6 +304,7 @@ export function useConversation(conversationId: string) {
 
   useEffect(() => {
     conversationIdRef.current = conversationId;
+    lastSeqRef.current = 0;
     const existing = sessionCache.get(conversationId);
 
     if (existing && existing.messages.length > 0) {
@@ -301,6 +347,7 @@ export function useConversation(conversationId: string) {
     send({
       type: 'chat:subscribe',
       conversationId,
+      lastSeq: 0,
       payload: {},
       timestamp: Date.now()
     });
@@ -314,29 +361,6 @@ export function useConversation(conversationId: string) {
       });
     };
   }, [conversationId, send]);
-
-  // Resubscribe whenever WebSocket reconnects (readyState === WebSocket.OPEN) and sync latest history
-  useEffect(() => {
-    if (readyState === WebSocket.OPEN && conversationId) {
-      send({
-        type: 'chat:subscribe',
-        conversationId,
-        payload: {},
-        timestamp: Date.now()
-      });
-      // Sync latest history in case turns occurred or finished while disconnected
-      fetchConversationHistory(conversationId, 5, 0)
-        .then((res) => {
-          if (conversationIdRef.current === conversationId && res && res.messages) {
-            dispatch({ type: 'sync_latest_history', messages: res.messages as Message[] });
-            setLoadedTurns((prev) => Math.max(prev, res.loadedTurns));
-            setTotalTurns(res.totalTurns);
-            setHasMoreHistory(res.hasMore);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [readyState, conversationId, send]);
 
   // When tab/mobile browser becomes visible again, sync latest history
   useEffect(() => {
@@ -431,6 +455,9 @@ export function useConversation(conversationId: string) {
   return {
     ...state,
     readyState,
+    rtt,
+    quality,
+    retryCount,
     send: sendPrompt,
     cancel,
     clearInteractivePrompt,

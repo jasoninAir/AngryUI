@@ -32,6 +32,7 @@ import {
   Gauge,
   Network,
   Sparkles,
+  Loader2,
   X
 } from 'lucide-react';
 
@@ -83,6 +84,10 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     totalTurns,
     loadedTurns,
     hasMoreHistory,
+    readyState,
+    rtt,
+    quality,
+    retryCount,
     send,
     cancel,
     loadHistory,
@@ -149,12 +154,14 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     }
   }, [conversationId, workspace]);
 
-  // Periodic counts for Subagents and Artifacts
+  // Periodic counts for Subagents and Artifacts (throttled when tab is in background/frozen)
   useEffect(() => {
     if (!conversationId) return;
     let mounted = true;
+    let timer: ReturnType<typeof setInterval> | null = null;
 
     const checkCounts = () => {
+      if (!mounted || document.hidden) return;
       fetchConversationSubagents(conversationId)
         .then((res) => {
           if (mounted) setSubagentCount(res.subagents?.length || 0);
@@ -168,11 +175,41 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
         .catch(() => {});
     };
 
-    checkCounts();
-    const interval = setInterval(checkCounts, 6000);
+    const startPolling = () => {
+      if (timer) clearInterval(timer);
+      checkCounts();
+      timer = setInterval(checkCounts, 6000);
+    };
+
+    const stopPolling = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        startPolling();
+      }
+    };
+
+    if (!document.hidden) {
+      startPolling();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('freeze', stopPolling);
+    document.addEventListener('resume', startPolling);
+
     return () => {
       mounted = false;
-      clearInterval(interval);
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('freeze', stopPolling);
+      document.removeEventListener('resume', startPolling);
     };
   }, [conversationId, status]);
 
@@ -400,6 +437,50 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
             <Terminal className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t('webtty')}</span>
           </button>
+
+          {/* Connection Quality Indicator (M-1, M-6) */}
+          <div
+            title={
+              quality === 'good'
+                ? `Connection: Good (${rtt}ms RTT)`
+                : quality === 'degraded'
+                ? `Connection: High Latency (${rtt}ms RTT)`
+                : quality === 'reconnecting'
+                ? `Connection: Reconnecting attempt #${retryCount}`
+                : 'Connection: Offline'
+            }
+            className={`hidden sm:flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border select-none ${
+              quality === 'good'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : quality === 'degraded'
+                ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
+                : quality === 'reconnecting'
+                ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
+                : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
+            }`}
+          >
+            {quality === 'good' ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-mono text-[10px]">{rtt > 0 ? `${rtt}ms` : t('connected') || 'Online'}</span>
+              </>
+            ) : quality === 'degraded' ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span className="font-mono text-[10px]">{rtt}ms</span>
+              </>
+            ) : quality === 'reconnecting' ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                <span className="font-mono text-[10px]">#{retryCount}</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                <span className="font-mono text-[10px]">{t('offline') || 'Offline'}</span>
+              </>
+            )}
+          </div>
 
           <span className="text-[10px] sm:text-[11px] font-mono uppercase bg-secondary px-1.5 sm:px-2 py-0.5 rounded text-secondary-foreground">
             {status === 'IDLE'

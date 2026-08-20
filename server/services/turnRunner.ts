@@ -2,6 +2,7 @@ import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import fs from 'fs';
 import { StringDecoder } from 'string_decoder';
 import { parseStreamLine, AgyEvent } from '../utils/streamParser';
+import { normalizeWorkspacePath } from '../utils/workspacePath';
 import { getConfig } from '../config';
 
 export interface TurnOptions {
@@ -46,18 +47,7 @@ export function formatAgyModel(model?: string, effort?: 'low' | 'medium' | 'high
 
 export class TurnRunner {
   spawn(opts: TurnOptions): TurnHandle {
-    let runCwd = process.cwd();
-    if (opts.cwd) {
-      const clean = opts.cwd.startsWith('file://') ? opts.cwd.replace('file://', '') : opts.cwd;
-      if (clean && clean.trim()) {
-        runCwd = clean.trim();
-        if (!fs.existsSync(runCwd)) {
-          try {
-            fs.mkdirSync(runCwd, { recursive: true });
-          } catch {}
-        }
-      }
-    }
+    const runCwd = normalizeWorkspacePath(opts.cwd);
 
     const formattedModel = formatAgyModel(opts.model, opts.effort);
     const allowSkip = Boolean(opts.dangerouslySkipPermissions || getConfig().allowSkipPermissions);
@@ -70,9 +60,11 @@ export class TurnRunner {
       '--print', opts.message
     ];
 
+    const isPosix = process.platform !== 'win32';
     const child: ChildProcessWithoutNullStreams = spawn(getConfig().agyBin, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: runCwd,
+      detached: isPosix,
       env: {
         ...process.env,
         LANG: 'en_US.UTF-8',
@@ -87,6 +79,8 @@ export class TurnRunner {
     const queue: AgyEvent[] = [];
     const waiters: ((ev: AgyEvent | null) => void)[] = [];
     let closed = false;
+    let killTimer: NodeJS.Timeout | null = null;
+    let aborted = false;
 
     const push = (ev: AgyEvent | null) => {
       const w = waiters.shift();
@@ -99,9 +93,12 @@ export class TurnRunner {
     let lastProposedCommand = '';
     const stdoutDecoder = new StringDecoder('utf-8');
     const stderrDecoder = new StringDecoder('utf-8');
+    const MAX_BUFFER_SIZE = 8 * 1024 * 1024; // 8MB safety bound
 
     child.stdout.on('data', (chunk: Buffer) => {
-      buffer += stdoutDecoder.write(chunk);
+      if (buffer.length < MAX_BUFFER_SIZE) {
+        buffer += stdoutDecoder.write(chunk);
+      }
       let idx;
       while ((idx = buffer.indexOf('\n')) !== -1) {
         const line = buffer.slice(0, idx);
@@ -127,10 +124,16 @@ export class TurnRunner {
     });
 
     child.stderr.on('data', (chunk: Buffer) => {
-      stderrBuffer += stderrDecoder.write(chunk);
+      if (stderrBuffer.length < MAX_BUFFER_SIZE) {
+        stderrBuffer += stderrDecoder.write(chunk);
+      }
     });
 
     child.on('close', (code) => {
+      if (killTimer) {
+        clearTimeout(killTimer);
+        killTimer = null;
+      }
       buffer += stdoutDecoder.end();
       stderrBuffer += stderrDecoder.end();
 
@@ -166,10 +169,32 @@ export class TurnRunner {
     });
 
     child.on('error', (e) => {
+      if (killTimer) {
+        clearTimeout(killTimer);
+        killTimer = null;
+      }
       push({ type: 'error', message: e.message });
       closed = true;
       push(null);
     });
+
+    const sendSignal = (signal: NodeJS.Signals) => {
+      if (!child.pid || child.killed) return;
+      try {
+        if (isPosix) {
+          // Negative PID sends signal to the entire process group
+          process.kill(-child.pid, signal);
+        } else {
+          child.kill(signal);
+        }
+      } catch (err: any) {
+        if (err?.code !== 'ESRCH') {
+          try {
+            child.kill(signal);
+          } catch {}
+        }
+      }
+    };
 
     const events: AsyncIterable<AgyEvent> = {
       [Symbol.asyncIterator](): AsyncIterator<AgyEvent> {
@@ -196,7 +221,18 @@ export class TurnRunner {
       pid: child.pid ?? -1,
       events,
       abort(): void {
-        child.kill('SIGINT');
+        if (aborted) return;
+        aborted = true;
+
+        sendSignal('SIGINT');
+        try {
+          sendSignal('SIGTERM');
+        } catch {}
+
+        killTimer = setTimeout(() => {
+          sendSignal('SIGKILL');
+        }, 5000);
+        killTimer.unref();
       }
     };
   }

@@ -14,6 +14,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useSidebar } from '@/context/SidebarContext';
 import { generateUUID } from '@/lib/uuid';
 import { getStoredToken } from '@/lib/auth';
+import { getDraft, setDraft, clearDraft } from '@/lib/draftStorage';
 
 export interface ChatInputHandle {
   insertSnippet: (snippet: string) => void;
@@ -96,6 +97,20 @@ export const ChatInput = forwardRef<
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const lastSentRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
+
+  // Restore draft when conversation changes
+  useEffect(() => {
+    setText(getDraft(conversationId));
+  }, [conversationId]);
+
+  // Persist draft with 300ms debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDraft(conversationId, text);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [text, conversationId]);
 
   useImperativeHandle(ref, () => ({
     insertSnippet: (snippet: string) => {
@@ -240,8 +255,17 @@ export const ChatInput = forwardRef<
       }
     }
 
-    if (promptText.trim()) {
-      onSend(promptText.trim());
+    const promptToSend = promptText.trim();
+    if (promptToSend) {
+      const now = Date.now();
+      if (lastSentRef.current.text === promptToSend && now - lastSentRef.current.at < 300) {
+        return;
+      }
+      lastSentRef.current = { text: promptToSend, at: now };
+
+      clearDraft(conversationId);
+
+      onSend(promptToSend);
       setText('');
     }
   };

@@ -4,7 +4,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import { getConfig } from './config';
-import { attachWsServer } from './ws/wsServer';
+import { attachWsServer, broadcastWsMessage } from './ws/wsServer';
 import { requireAuth } from './utils/tokens';
 import { ConversationIndex } from './db/conversationIndex';
 import { createProjectsRouter } from './routes/projects';
@@ -131,15 +131,30 @@ if (fs.existsSync(distPath)) {
   });
 }
 
+const httpServer = http.createServer(app);
+const wss = attachWsServer(httpServer, config.token, index);
+
 // Start the discovery service to watch conversation_summaries.db and history.jsonl.
-// Logs deltas; in later phases, this will broadcast over WebSocket.
+// Broadcasts session deltas to all connected WebSocket clients in real-time.
 const discovery = new DiscoveryService(index);
 discovery.start((event) => {
   logger.info({ type: event.type, conversation_id: event.conversation_id }, '[Discovery]');
+  if (event.type === 'upsert') {
+    broadcastWsMessage(wss, {
+      type: 'session:upsert',
+      conversationId: event.conversation_id,
+      payload: { session: event.summary },
+      timestamp: Date.now()
+    });
+  } else if (event.type === 'remove') {
+    broadcastWsMessage(wss, {
+      type: 'session:remove',
+      conversationId: event.conversation_id,
+      payload: { conversationId: event.conversation_id },
+      timestamp: Date.now()
+    });
+  }
 });
-
-const httpServer = http.createServer(app);
-attachWsServer(httpServer, config.token, index);
 
 httpServer.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {

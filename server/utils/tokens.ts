@@ -13,7 +13,15 @@ export function checkToken(req: IncomingMessage, expected: string | null): boole
     if (match && decodeURIComponent(match[1]) === expected) return true;
   }
 
-  // For WebSocket: also check URL token query
+  // Check WebSocket Subprotocol header (Sec-WebSocket-Protocol: bearer, <token>)
+  const secProto = req.headers['sec-websocket-protocol'];
+  if (typeof secProto === 'string') {
+    const parts = secProto.split(',').map((p) => p.trim());
+    if (parts.length >= 2 && parts[0] === 'bearer' && parts[1] === expected) return true;
+    if (parts.includes(expected)) return true;
+  }
+
+  // For WebSocket: also check URL token query (fallback)
   const url = new URL(req.url ?? '/', 'http://localhost');
   if (url.searchParams.get('token') === expected) return true;
   return false;

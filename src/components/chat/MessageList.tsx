@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { MessageItem } from './MessageItem';
 import { useLanguage } from '@/context/LanguageContext';
 import { Loader2, ArrowDown } from 'lucide-react';
@@ -12,50 +13,18 @@ export function MessageList({
   loading?: boolean;
   onFileClick?: (path: string, startLine?: number, endLine?: number) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
-  const isInitialScrollRef = useRef(true);
-  const prevLengthRef = useRef(0);
   const { t } = useLanguage();
 
-  const checkScrollPosition = useCallback(() => {
-    if (!containerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    // Show button if user is scrolled up by more than 150px
-    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 150;
-    setShowScrollBottom(isScrolledUp);
-  }, []);
-
   const scrollToBottom = useCallback((smooth = true) => {
-    if (!containerRef.current) return;
-    containerRef.current.scrollTo({
-      top: containerRef.current.scrollHeight,
+    virtuosoRef.current?.scrollToIndex({
+      index: messages.length - 1,
+      align: 'end',
       behavior: smooth ? 'smooth' : 'auto'
     });
     setShowScrollBottom(false);
-  }, []);
-
-  // Initial scroll to bottom on load / conversation switch
-  useEffect(() => {
-    if (messages.length > 0) {
-      if (isInitialScrollRef.current || prevLengthRef.current === 0) {
-        // Immediate scroll to bottom on first load
-        requestAnimationFrame(() => {
-          scrollToBottom(false);
-        });
-        isInitialScrollRef.current = false;
-      } else if (containerRef.current) {
-        // Auto-scroll on new messages only if user was already near the bottom
-        const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-        const isNearBottom = scrollHeight - scrollTop - clientHeight < 180;
-        if (isNearBottom) {
-          scrollToBottom(true);
-        }
-      }
-      prevLengthRef.current = messages.length;
-    }
-  }, [messages, scrollToBottom]);
+  }, [messages.length]);
 
   if (messages.length === 0) {
     if (loading) {
@@ -79,16 +48,28 @@ export function MessageList({
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <div
-        ref={containerRef}
-        onScroll={checkScrollPosition}
-        className="h-full overflow-y-auto p-4 space-y-4 overscroll-contain"
-      >
-        {messages.map((m) => (
-          <MessageItem key={m.id} msg={m} onFileClick={onFileClick} />
-        ))}
-        <div ref={messagesEndRef} className="h-1 shrink-0" />
-      </div>
+      <Virtuoso
+        ref={virtuosoRef}
+        data={messages}
+        initialTopMostItemIndex={messages.length - 1}
+        followOutput={(isAtBottom) => (isAtBottom ? 'smooth' : false)}
+        atBottomStateChange={(atBottom) => setShowScrollBottom(!atBottom)}
+        className="h-full w-full overflow-y-auto overscroll-contain"
+        components={{
+          Header: () =>
+            loading ? (
+              <div className="py-3 flex items-center justify-center text-xs text-muted-foreground gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                <span>{t('loadingEarlier')}</span>
+              </div>
+            ) : null
+        }}
+        itemContent={(index, m) => (
+          <div className="px-4 py-2" key={m.id || index}>
+            <MessageItem msg={m} onFileClick={onFileClick} />
+          </div>
+        )}
+      />
 
       {/* Floating Scroll to Bottom Button */}
       {showScrollBottom && (

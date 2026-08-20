@@ -2,6 +2,7 @@ export type WSMessage<T = any> = {
   type: string;
   conversationId: string;
   payload: T;
+  seq?: number;
   timestamp: number;
 };
 
