@@ -160,6 +160,13 @@ export class ConversationIndex {
         continue;
       }
 
+      // Filter ephemeral test probes (e.g. 'say hi', 'long task') from polluting sidebar project tree
+      const lowerTitle = (c.title || '').trim().toLowerCase();
+      const isProbe = (lowerTitle === 'say hi' || lowerTitle === 'long task') && (c.step_count || 0) <= 4;
+      if (isProbe) {
+        continue;
+      }
+
       totalCount++;
       const isArchived = archivedIds.has(c.conversation_id);
       if (isArchived) {
