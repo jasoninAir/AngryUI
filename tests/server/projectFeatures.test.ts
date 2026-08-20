@@ -95,8 +95,8 @@ describe('Project Aliasing, Probe Isolation, and Lock Protection', () => {
 
   it('project lock: upsertConversationSummary preserves existing workspace and prevents workspace drift', () => {
     const mockId = `test-lock-${Date.now()}`;
-    const initialWs = `/Users/jason/projects/my-fixed-project-${Date.now()}`;
-    const driftedWs = `/Users/jason/projects/some-other-subfolder-${Date.now()}`;
+    const initialWs = `/tmp/test-project-fixed-${Date.now()}`;
+    const driftedWs = `/tmp/test-project-subfolder-${Date.now()}`;
 
     const initialSummary: ConversationSummary = {
       conversation_id: mockId,
