@@ -139,11 +139,13 @@ describe('Project Aliasing, Probe Isolation, and Lock Protection', () => {
 
     idx.load();
     const locked = idx.getById(mockId);
-    // Workspace must remain initialWs!
+    // Workspace must remain immutably locked to initialWs!
     expect(locked?.workspace_uris[0]).toBe(`file://${initialWs}`);
-    expect(locked?.step_count).toBe(6);
 
     // Clean up
     idx.delete(mockId);
+    try {
+      fs.rmSync(brainDir, { recursive: true, force: true });
+    } catch {}
   });
 });

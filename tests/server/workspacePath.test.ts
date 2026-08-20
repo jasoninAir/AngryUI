@@ -30,9 +30,9 @@ describe('workspacePath utility', () => {
   });
 
   it('toFileUri and fromFileUri convert correctly', () => {
-    expect(toFileUri('/Users/jason/project')).toBe('file:///Users/jason/project');
-    expect(toFileUri('file:///Users/jason/project')).toBe('file:///Users/jason/project');
-    expect(fromFileUri('file:///Users/jason/project')).toBe('/Users/jason/project');
-    expect(fromFileUri('/Users/jason/project')).toBe('/Users/jason/project');
+    expect(toFileUri('/path/to/project')).toBe('file:///path/to/project');
+    expect(toFileUri('file:///path/to/project')).toBe('file:///path/to/project');
+    expect(fromFileUri('file:///path/to/project')).toBe('/path/to/project');
+    expect(fromFileUri('/path/to/project')).toBe('/path/to/project');
   });
 });

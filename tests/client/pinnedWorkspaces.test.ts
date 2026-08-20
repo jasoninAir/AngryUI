@@ -10,7 +10,7 @@ import {
 
 describe('pinnedWorkspaces', () => {
   it('manages pin, unpin, toggle and queries safely', () => {
-    const ws = '/Users/jason/myprojects/angryui';
+    const ws = '/tmp/mock-project-workspace';
     expect(typeof isWorkspacePinned(ws)).toBe('boolean');
 
     pinWorkspace(ws);
@@ -23,8 +23,8 @@ describe('pinnedWorkspaces', () => {
   });
 
   it('normalizes file:// URIs correctly', () => {
-    pinWorkspace('file:///Users/jason/test-project/');
-    expect(isWorkspacePinned('/Users/jason/test-project')).toBe(true);
-    unpinWorkspace('/Users/jason/test-project');
+    pinWorkspace('file:///tmp/test-project/');
+    expect(isWorkspacePinned('/tmp/test-project')).toBe(true);
+    unpinWorkspace('/tmp/test-project');
   });
 });
