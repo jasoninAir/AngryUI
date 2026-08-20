@@ -382,6 +382,10 @@ export function MarkdownContent({
             }
           }
 
+          try {
+            targetPath = decodeURIComponent(targetPath);
+          } catch {}
+
           return (
             <button
               type="button"

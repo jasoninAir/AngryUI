@@ -85,12 +85,23 @@ const MAX_PREVIEW_BYTES = 2 * 1024 * 1024; // 2MB
 export function readWorkspaceFile(filePath: string, workspaceRoot?: string): FileContentResult {
   let cleanPath = filePath.startsWith('file://') ? filePath.replace(/^file:\/\//, '') : filePath;
   cleanPath = cleanPath.trim();
+  try {
+    cleanPath = decodeURIComponent(cleanPath);
+  } catch {}
+
+  let cleanWs = workspaceRoot
+    ? (workspaceRoot.startsWith('file://') ? workspaceRoot.replace(/^file:\/\//, '') : workspaceRoot).trim()
+    : undefined;
+  if (cleanWs) {
+    try {
+      cleanWs = decodeURIComponent(cleanWs);
+    } catch {}
+  }
 
   // Try resolving directly or via workspaceRoot
   let resolvedPath = path.resolve(cleanPath);
-  if (!fs.existsSync(resolvedPath) && workspaceRoot) {
-    let cleanWs = workspaceRoot.startsWith('file://') ? workspaceRoot.replace(/^file:\/\//, '') : workspaceRoot;
-    const wsResolved = path.resolve(cleanWs.trim(), cleanPath);
+  if (!fs.existsSync(resolvedPath) && cleanWs) {
+    const wsResolved = path.resolve(cleanWs, cleanPath);
     if (fs.existsSync(wsResolved)) {
       resolvedPath = wsResolved;
     }
@@ -99,7 +110,7 @@ export function readWorkspaceFile(filePath: string, workspaceRoot?: string): Fil
   cleanPath = resolvedPath;
 
   if (!fs.existsSync(cleanPath)) {
-    throw new Error(`File not found: ${filePath}`);
+    throw new Error(`File not found: ${cleanPath}`);
   }
 
   const stat = fs.statSync(cleanPath);

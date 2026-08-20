@@ -92,7 +92,8 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
     cancel,
     loadHistory,
     clearInteractivePrompt,
-    clearPermissionPrompt
+    clearPermissionPrompt,
+    sendDecision
   } = useConversation(conversationId);
 
   // Sync real-time session status to global context
@@ -136,10 +137,18 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   // Auto-fill workspace from database if not specified in searchParams
   useEffect(() => {
     if (!workspace) {
-      authFetch('/api/projects')
-        .then((res) => res.json())
+      authFetch(`/api/conversations/${encodeURIComponent(conversationId)}`)
+        .then((res) => {
+          if (res.ok) return res.json();
+          return authFetch('/api/projects').then((r) => r.json());
+        })
         .then((data) => {
-          if (data && data.groups) {
+          if (data && data.workspace_uris && data.workspace_uris[0]) {
+            const cleanW = data.workspace_uris[0].startsWith('file://')
+              ? data.workspace_uris[0].replace('file://', '')
+              : data.workspace_uris[0];
+            setWorkspace(cleanW);
+          } else if (data && data.groups) {
             for (const g of data.groups) {
               const found = g.conversations.find((c: any) => c.conversation_id === conversationId);
               if (found && g.workspace) {
@@ -218,47 +227,41 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
   };
 
   const handleAllowOnceAndContinue = () => {
-    clearPermissionPrompt();
-    send('允许执行本次命令，请继续执行下一步任务。', model, effort, workspace, true);
+    sendDecision(true);
   };
 
   const handleAllowTemporaryAndContinue = () => {
-    if (!permissionPrompt?.command) {
-      handleAllowOnceAndContinue();
-      return;
+    if (permissionPrompt?.command) {
+      addTemporaryRule(permissionPrompt.command, 10 * 60 * 1000);
     }
-    const cmd = permissionPrompt.command;
-    addTemporaryRule(cmd, 10 * 60 * 1000);
-    clearPermissionPrompt();
-    send(`已临时允许命令 ${cmd} (10分钟内免确认)，请继续执行任务。`, model, effort, workspace, true);
+    sendDecision(true);
   };
 
   // Auto-approve command if matching active 10-minute temporary memory whitelist
   useEffect(() => {
     if (permissionPrompt?.command && isTemporarilyAllowed(permissionPrompt.command)) {
-      const cmd = permissionPrompt.command;
-      clearPermissionPrompt();
-      send(`命令 ${cmd} 命中10分钟临时白名单，已自动放行执行。`, model, effort, workspace, true);
+      sendDecision(true);
     }
-  }, [permissionPrompt, workspace, model, effort, clearPermissionPrompt, send]);
+  }, [permissionPrompt, sendDecision]);
 
   const handleAddToAllowlistAndContinue = async () => {
-    if (!permissionPrompt?.command) {
-      handleAllowOnceAndContinue();
-      return;
+    if (permissionPrompt?.command) {
+      const cmdRule = `command(${permissionPrompt.command})`;
+      try {
+        await authFetch('/api/settings/permissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pattern: cmdRule })
+        });
+      } catch (e) {
+        console.error('Failed to add to allowlist:', e);
+      }
     }
-    const cmdRule = `command(${permissionPrompt.command})`;
-    try {
-      await authFetch('/api/settings/permissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pattern: cmdRule })
-      });
-    } catch (e) {
-      console.error('Failed to add to allowlist:', e);
-    }
-    clearPermissionPrompt();
-    send(`已将命令 ${permissionPrompt.command} 加入白名单规则，请继续执行任务。`, model, effort, workspace, false);
+    sendDecision(true);
+  };
+
+  const handleDenyDecision = () => {
+    sendDecision(false);
   };
 
   const cleanWorkspaceDisplay = workspace ? (workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace) : undefined;
@@ -539,7 +542,7 @@ export function ChatContainer({ conversationId }: { conversationId: string }) {
               onAllowTemporary={handleAllowTemporaryAndContinue}
               onAddToWhitelist={handleAddToAllowlistAndContinue}
               onTakeoverTTY={() => setShowTty(true)}
-              onDeny={clearPermissionPrompt}
+              onDeny={handleDenyDecision}
             />
           )}
 

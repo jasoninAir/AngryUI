@@ -436,6 +436,16 @@ export function useConversation(conversationId: string) {
     dispatch({ type: 'permission_prompt', info: null });
   };
 
+  const sendDecision = (approved: boolean, response?: string) => {
+    send({
+      type: 'chat:decision',
+      conversationId: conversationIdRef.current,
+      payload: { approved, response },
+      timestamp: Date.now()
+    });
+    dispatch({ type: 'permission_prompt', info: null });
+  };
+
   const refresh = () => {
     send({
       type: 'chat:unsubscribe',
@@ -462,6 +472,7 @@ export function useConversation(conversationId: string) {
     cancel,
     clearInteractivePrompt,
     clearPermissionPrompt,
+    sendDecision,
     refresh,
     loadHistory,
     loadedTurns,

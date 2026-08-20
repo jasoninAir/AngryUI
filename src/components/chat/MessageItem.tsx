@@ -24,6 +24,9 @@ export function resolveMediaUrl(rawPathOrUrl: string): { url: string; isImage: b
   if (clean.startsWith('file://')) {
     clean = clean.replace(/^file:\/\//, '');
   }
+  try {
+    clean = decodeURIComponent(clean);
+  } catch {}
 
   const filename = clean.split('/').pop()?.split('?')[0] || 'attachment';
   const ext = (filename.includes('.') ? '.' + filename.split('.').pop() : '').toLowerCase();

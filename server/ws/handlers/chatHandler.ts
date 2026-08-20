@@ -232,6 +232,17 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
       return;
     }
 
+    if (safeMsg.type === 'chat:decision' && safeMsg.conversationId && safeMsg.payload) {
+      const convId = safeMsg.conversationId;
+      const { approved, response } = safeMsg.payload;
+      const active = activeTurnManager.get(convId);
+      if (active && active.handle && typeof (active.handle as any).write === 'function') {
+        const inputData = response ? `${response}\n` : approved ? 'y\n' : 'n\n';
+        (active.handle as any).write(inputData);
+      }
+      return;
+    }
+
     if (safeMsg.type === 'chat:send' && safeMsg.conversationId && safeMsg.payload) {
       const convId = safeMsg.conversationId;
       const { message, model, effort, workspace, dangerouslySkipPermissions } = safeMsg.payload;
@@ -255,16 +266,22 @@ export function handleChatConnection(ws: WebSocket, _index: ConversationIndex): 
 
       // 2. Prevent duplicate/concurrent turns on the same conversation
       if (activeTurnManager.has(convId)) {
-        send({
-          type: 'chat:error',
-          conversationId: convId,
-          payload: {
-            message: 'A turn is already in progress for this conversation',
-            code: 'TURN_ALREADY_RUNNING',
-          },
-          timestamp: Date.now()
-        });
-        return;
+        if (dangerouslySkipPermissions) {
+          // If explicitly skipping permissions to recover from stalled turn, abort previous and proceed
+          console.log(`[ChatHandler] Aborting stalled turn for ${convId} to restart with permission bypass`);
+          activeTurnManager.abort(convId);
+        } else {
+          send({
+            type: 'chat:error',
+            conversationId: convId,
+            payload: {
+              message: 'A turn is already in progress for this conversation',
+              code: 'TURN_ALREADY_RUNNING',
+            },
+            timestamp: Date.now()
+          });
+          return;
+        }
       }
 
       // 3. Pre-occupy brain transcript file and bind workspace in SQLite summary

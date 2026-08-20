@@ -42,6 +42,9 @@ export function createUploadRouter(): Router {
     if (rawPath.startsWith('file://')) {
       rawPath = rawPath.replace(/^file:\/\//, '');
     }
+    try {
+      rawPath = decodeURIComponent(rawPath);
+    } catch {}
 
     const resolved = path.resolve(rawPath.trim());
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {

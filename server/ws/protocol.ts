@@ -30,6 +30,14 @@ export const ClientMsgSchema = z.discriminatedUnion('type', [
   }).passthrough(),
   z.object({ type: z.literal('chat:unsubscribe'), conversationId: z.string() }).passthrough(),
   z.object({ type: z.literal('chat:cancel'), conversationId: z.string() }).passthrough(),
+  z.object({
+    type: z.literal('chat:decision'),
+    conversationId: z.string(),
+    payload: z.object({
+      approved: z.boolean(),
+      response: z.string().optional()
+    }).passthrough()
+  }).passthrough(),
   z.object({ type: z.literal('chat:quota') }).passthrough(),
   z.object({ type: z.literal('chat:ping'), conversationId: z.string().optional(), payload: z.any().optional(), timestamp: z.number().optional() }).passthrough(),
   z.object({ type: z.literal('chat:set_status'), conversationId: z.string(), payload: z.object({ status: z.string() }) }).passthrough(),

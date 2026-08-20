@@ -17,6 +17,7 @@ export interface TurnOptions {
 export interface TurnHandle {
   pid: number;
   events: AsyncIterable<AgyEvent>;
+  write(data: string): void;
   abort(): void;
 }
 
@@ -220,6 +221,15 @@ export class TurnRunner {
     return {
       pid: child.pid ?? -1,
       events,
+      write(data: string): void {
+        try {
+          if (child.stdin && !child.stdin.destroyed) {
+            child.stdin.write(data);
+          }
+        } catch (err) {
+          console.warn(`[TurnRunner] Failed to write to child stdin (${opts.conversationId}):`, err);
+        }
+      },
       abort(): void {
         if (aborted) return;
         aborted = true;
