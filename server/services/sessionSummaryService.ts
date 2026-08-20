@@ -3,6 +3,7 @@ import path from 'path';
 import { getConfig } from '../config';
 import { openConversationDbWrite, openConversationDb, ConversationSummary } from '../db/sqliteClient';
 import { readCustomTitles } from './sessionMetaService';
+import { normalizeWorkspacePath, toFileUri } from '../utils/workspacePath';
 
 export function cleanUserPrompt(raw: string): string {
   let text = raw;
@@ -53,10 +54,28 @@ export function extractSessionSummary(
     return null;
   }
 
+  // Check if SQLite already has an established canonical workspace for this session
+  let existingWs = '';
+  try {
+    const db = openConversationDb();
+    const existingRow = db
+      .prepare('SELECT workspace_uris FROM conversation_summaries WHERE conversation_id = ?')
+      .get(conversationId) as any;
+    if (existingRow?.workspace_uris) {
+      const uris = JSON.parse(existingRow.workspace_uris);
+      if (Array.isArray(uris) && uris[0]) {
+        const clean = uris[0].replace(/^file:\/\//, '');
+        if (fs.existsSync(clean) && fs.statSync(clean).isDirectory()) {
+          existingWs = clean;
+        }
+      }
+    }
+  } catch {}
+
   let title = '';
   let preview = '';
   let stepCount = 0;
-  let workspaceUri = fallbackWorkspace || '';
+  let workspaceUri = fallbackWorkspace || existingWs || '';
   let lastUserInputTime = new Date().toISOString();
   let lastModifiedTime = new Date().toISOString();
   let isSubagent = Boolean(knownParentId);
@@ -90,6 +109,17 @@ export function extractSessionSummary(
     for (const line of lines) {
       try {
         const row = JSON.parse(line);
+
+        // Check for workspace declaration in <user_information> block
+        if (typeof row.content === 'string' && row.content.includes('<user_information>')) {
+          const match = row.content.match(
+            /The user has \d+ active workspaces[\s\S]*?\[URI\] -> \[CorpusName\]:\s*(\/[^\s\n\r]+)/i
+          );
+          if (match && match[1]) {
+            workspaceUri = match[1].trim();
+          }
+        }
+
         if (row.type === 'USER_INPUT' || row.source === 'USER_EXPLICIT') {
           if (!title && row.content) {
             const clean = cleanUserPrompt(row.content);
@@ -106,20 +136,6 @@ export function extractSessionSummary(
         if (row.event === 'init' && row.init?.cwd && !workspaceUri) {
           workspaceUri = row.init.cwd;
         }
-        // Extract workspace if present in tool calls
-        if (row.tool_calls && Array.isArray(row.tool_calls)) {
-          for (const tc of row.tool_calls) {
-            const rawPath = tc.args?.DirectoryPath || tc.args?.Cwd || tc.args?.SearchPath || tc.args?.AbsolutePath;
-            if (rawPath && typeof rawPath === 'string') {
-              const cleanPath = rawPath.replace(/\\"/g, '').replace(/"/g, '').trim();
-              if (cleanPath.startsWith('/') && !cleanPath.includes('.gemini/antigravity-cli')) {
-                if (!workspaceUri || workspaceUri === process.cwd() || workspaceUri.includes('agy-webui')) {
-                  workspaceUri = cleanPath;
-                }
-              }
-            }
-          }
-        }
       } catch {}
     }
   } catch (e) {
@@ -130,9 +146,18 @@ export function extractSessionSummary(
     title = isSubagent ? `子任务 ${conversationId.slice(0, 8)}` : `会话 ${conversationId.slice(0, 8)}`;
   }
   if (!workspaceUri) {
-    workspaceUri = fallbackWorkspace || process.cwd();
+    workspaceUri = fallbackWorkspace || existingWs || process.cwd();
   }
-  const cleanWs = workspaceUri.startsWith('file://') ? workspaceUri : `file://${workspaceUri}`;
+
+  // Canonicalize workspace path to prevent file paths or slight variances from splitting sessions
+  let canonicalWs = workspaceUri;
+  try {
+    canonicalWs = normalizeWorkspacePath(workspaceUri);
+  } catch {
+    const cleaned = workspaceUri.replace(/^file:\/\//, '');
+    canonicalWs = fs.existsSync(cleaned) && fs.statSync(cleaned).isFile() ? path.dirname(cleaned) : cleaned;
+  }
+  const cleanWs = toFileUri(canonicalWs);
 
   return {
     conversation_id: conversationId,
@@ -303,7 +328,59 @@ export function syncUnindexedDiskSessions(force = false): void {
         }
       }
     }
+
+    // 5. Sanitize any legacy / invalid workspace URIs in SQLite
+    sanitizeExistingWorkspaceUris();
   } catch (e) {
     console.error('Failed to sync disk sessions:', e);
+  }
+}
+
+/**
+ * Normalizes all workspace URIs stored in SQLite so that file paths or subpaths
+ * are resolved to their canonical root directory, preventing session tree splitting.
+ */
+export function sanitizeExistingWorkspaceUris(): void {
+  try {
+    const db = openConversationDbWrite();
+    const rows = db.prepare('SELECT conversation_id, workspace_uris FROM conversation_summaries').all() as any[];
+    const updateStmt = db.prepare('UPDATE conversation_summaries SET workspace_uris = ? WHERE conversation_id = ?');
+
+    let fixedCount = 0;
+    for (const row of rows) {
+      if (!row.workspace_uris) continue;
+      let uris: string[] = [];
+      try {
+        uris = JSON.parse(row.workspace_uris);
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(uris) || uris.length === 0 || !uris[0]) continue;
+
+      const rawUri = uris[0];
+      const cleanPath = rawUri.replace(/^file:\/\//, '').trim();
+
+      try {
+        let fixedPath = cleanPath;
+        if (fs.existsSync(cleanPath)) {
+          const stat = fs.statSync(cleanPath);
+          if (stat.isFile()) {
+            fixedPath = path.dirname(cleanPath);
+          }
+          fixedPath = fs.realpathSync(fixedPath);
+        }
+        const newUri = toFileUri(fixedPath);
+        if (newUri !== rawUri) {
+          updateStmt.run(JSON.stringify([newUri]), row.conversation_id);
+          fixedCount++;
+        }
+      } catch {}
+    }
+    db.close();
+    if (fixedCount > 0) {
+      console.log(`[SessionSync] Sanitized and normalized ${fixedCount} workspace URIs in SQLite.`);
+    }
+  } catch (e) {
+    console.warn('Failed to sanitize workspace URIs:', e);
   }
 }

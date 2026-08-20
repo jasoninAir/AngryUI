@@ -65,38 +65,65 @@ export function Sidebar() {
       : rawWorkspace
     : undefined;
 
+  const normalizePathKey = (p: string): string => {
+    let clean = p.startsWith('file://') ? p.replace(/^file:\/\//, '') : p;
+    if (clean.length > 1 && clean.endsWith('/')) {
+      clean = clean.slice(0, -1);
+    }
+    return clean;
+  };
+
   // Synthesize group list:
-  // 1. Existing groups from SQLite index
+  // 1. Existing groups from SQLite index (with key canonicalization)
   // 2. Include all pinned workspaces (even with 0 sessions)
-  // 3. Include active route workspace if not present
+  // 3. Include active route workspace if not already present in an existing group
   // 4. Sort: pinned groups first, then alphabetically
   const groupMap = new Map<string, ProjectGroup>();
   for (const g of groups) {
-    const cleanW = g.workspace.startsWith('file://') ? g.workspace.replace('file://', '') : g.workspace;
-    groupMap.set(cleanW, g);
+    const cleanW = normalizePathKey(g.workspace);
+    const existing = groupMap.get(cleanW);
+    if (existing) {
+      existing.conversations.push(...g.conversations);
+    } else {
+      groupMap.set(cleanW, {
+        workspace: cleanW,
+        conversations: [...g.conversations]
+      });
+    }
   }
 
   // Ensure all pinned workspaces are retained in the tree
   for (const pinned of pinnedWorkspaces) {
-    if (!groupMap.has(pinned)) {
-      groupMap.set(pinned, {
-        workspace: pinned,
+    const cleanPinned = normalizePathKey(pinned);
+    if (!groupMap.has(cleanPinned)) {
+      groupMap.set(cleanPinned, {
+        workspace: cleanPinned,
         conversations: []
       });
     }
   }
 
-  // Ensure active route workspace is included
-  if (activeConversationId && activeWorkspaceClean && !groupMap.has(activeWorkspaceClean)) {
-    groupMap.set(activeWorkspaceClean, {
-      workspace: activeWorkspaceClean,
-      conversations: []
-    });
+  // Check if active conversation is already rendered in any group
+  const isConversationInGroup = activeConversationId
+    ? Array.from(groupMap.values()).some((g) =>
+        g.conversations.some((c) => c.conversation_id === activeConversationId)
+      )
+    : false;
+
+  // Ensure active route workspace is included only if not already grouped
+  if (activeConversationId && activeWorkspaceClean && !isConversationInGroup) {
+    const cleanActiveWs = normalizePathKey(activeWorkspaceClean);
+    if (!groupMap.has(cleanActiveWs)) {
+      groupMap.set(cleanActiveWs, {
+        workspace: cleanActiveWs,
+        conversations: []
+      });
+    }
   }
 
   const displayGroups = Array.from(groupMap.values()).sort((a, b) => {
-    const aClean = a.workspace.startsWith('file://') ? a.workspace.replace('file://', '') : a.workspace;
-    const bClean = b.workspace.startsWith('file://') ? b.workspace.replace('file://', '') : b.workspace;
+    const aClean = normalizePathKey(a.workspace);
+    const bClean = normalizePathKey(b.workspace);
     const aPinned = isPinned(aClean);
     const bPinned = isPinned(bClean);
 

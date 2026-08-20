@@ -8,8 +8,9 @@ export function handleTuiConnection(
   index?: ConversationIndex
 ): void {
   const manager = new PtyManager();
-  const conv = index ? index.get(conversationId) : undefined;
-  const session = manager.spawn(conversationId, conv?.workspace);
+  const conv = index ? index.getById(conversationId) : undefined;
+  const rawWs = (conv?.workspace_uris && conv.workspace_uris[0]) || undefined;
+  const session = manager.spawn(conversationId, rawWs);
 
   session.onData((data) => {
     if (ws.readyState === WebSocket.OPEN) {

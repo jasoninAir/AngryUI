@@ -68,17 +68,24 @@ export class PtyManager {
       if (clean && clean.trim()) runCwd = clean.trim();
     }
 
+    const agyBin = getConfig().agyBin;
+    const env = {
+      ...process.env,
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor'
+    } as { [key: string]: string };
+
     let proc: pty.IPty;
     try {
-      proc = pty.spawn(getConfig().agyBin, ['--conversation', conversationId], {
-        name: 'xterm-color',
+      proc = pty.spawn(agyBin, ['--conversation', conversationId], {
+        name: 'xterm-256color',
         cols: 80,
         rows: 24,
         cwd: runCwd,
-        env: process.env as { [key: string]: string }
+        env
       });
     } catch (e: any) {
-      const errorMsg = `[WebTTY unavailable] node-pty failed to spawn: ${e.message}`;
+      const errorMsg = `[WebTTY unavailable] node-pty failed to spawn (${agyBin}): ${e.message}`;
       console.error(errorMsg);
 
       return {

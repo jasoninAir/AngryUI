@@ -56,13 +56,22 @@ export function WebTTYModal({
     const token = getStoredToken();
     const query = token ? `?token=${encodeURIComponent(token)}` : '';
     const wsUrl = `${proto}://${location.host}/ws/tui/${encodeURIComponent(conversationId)}${query}`;
-    const ws = new WebSocket(wsUrl);
+    const protocols = token ? ['bearer', token] : undefined;
+    const ws = new WebSocket(wsUrl, protocols);
     wsRef.current = ws;
 
+    const timeoutTimer = setTimeout(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        term.writeln('\r\n\x1b[33m[WebTTY] Still connecting... If this takes too long, verify your network or server status.\x1b[0m');
+      }
+    }, 6000);
+
     ws.onopen = () => {
+      clearTimeout(timeoutTimer);
       setStatus('connected');
       term.writeln('\x1b[32m[WebTTY] Connected.\x1b[0m\r\n');
       ws.send(JSON.stringify({ type: 'tui:resize', cols: term.cols, rows: term.rows }));
+      term.focus();
     };
 
     ws.onmessage = (e) => {
