@@ -64,6 +64,12 @@ export const translations = {
     unpinWorkspace: 'Unpin project directory',
     pinToFavorites: 'Pin to favorites',
     noSessionsClickToStart: 'No active sessions (click + to start)',
+    renameProject: 'Rename Project Alias',
+    projectAliasPlaceholder: 'e.g. eMAG Transfer',
+    probesAndEphemeral: 'Probes & Ephemeral',
+    clearProbes: 'Clear Probes',
+    clearedProbesCount: 'Cleared probe sessions',
+    projectLocked: 'Project Locked',
 
     // Chat Header & Controls
     model: 'Model',
@@ -302,6 +308,12 @@ export const translations = {
     unpinWorkspace: '取消固定目录',
     pinToFavorites: '固定到常用项目目录',
     noSessionsClickToStart: '暂无会话，点击 + 发起新对话',
+    renameProject: '重命名项目别名',
+    projectAliasPlaceholder: '例如：eMAG Transfer',
+    probesAndEphemeral: '探针与临时会话',
+    clearProbes: '清空探针',
+    clearedProbesCount: '已清理探针会话',
+    projectLocked: '项目已锁定',
 
     // Chat Header & Controls
     model: '模型',
@@ -540,6 +552,12 @@ export const translations = {
     unpinWorkspace: '取消固定目錄',
     pinToFavorites: '固定到常用專案目錄',
     noSessionsClickToStart: '暫無會話，點擊 + 發起新對話',
+    renameProject: '重新命名專案別名',
+    projectAliasPlaceholder: '例如：eMAG Transfer',
+    probesAndEphemeral: '探針與臨時會話',
+    clearProbes: '清空探針',
+    clearedProbesCount: '已清理探針會話',
+    projectLocked: '專案已鎖定',
 
     // Chat Header & Controls
     model: '模型',
@@ -778,6 +796,12 @@ export const translations = {
     unpinWorkspace: 'ピン留めを解除',
     pinToFavorites: 'お気に入りにピン留め',
     noSessionsClickToStart: 'セッションがありません (+ を押して新規開始)',
+    renameProject: 'プロジェクト名の変更',
+    projectAliasPlaceholder: '例：eMAG Transfer',
+    probesAndEphemeral: 'プローブと一時セッション',
+    clearProbes: 'プローブをクリア',
+    clearedProbesCount: 'プローブセッションをクリアしました',
+    projectLocked: 'プロジェクトロック',
 
     // Chat Header & Controls
     model: 'モデル',
@@ -1016,6 +1040,12 @@ export const translations = {
     unpinWorkspace: 'Desfijar espacio de trabajo',
     pinToFavorites: 'Fijar a favoritos',
     noSessionsClickToStart: 'Sin sesiones activas (clic + para iniciar)',
+    renameProject: 'Renombrar alias de proyecto',
+    projectAliasPlaceholder: 'ej. eMAG Transfer',
+    probesAndEphemeral: 'Sondas y sesiones temporales',
+    clearProbes: 'Limpiar sondas',
+    clearedProbesCount: 'Sesiones de sonda limpiadas',
+    projectLocked: 'Proyecto bloqueado',
 
     // Chat Header & Controls
     model: 'Modelo',

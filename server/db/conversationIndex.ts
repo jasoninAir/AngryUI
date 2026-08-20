@@ -6,26 +6,44 @@ import {
 import {
   readArchivedIds,
   setConversationArchived,
-  deleteLocalSessionFiles,
   readCustomTitles,
-  setCustomTitle
+  setCustomTitle,
+  deleteLocalSessionFiles,
+  readProjectAliases
 } from '../services/sessionMetaService';
 import { syncUnindexedDiskSessions } from '../services/sessionSummaryService';
 
 const SELECT_ALL = `
   SELECT
-    conversation_id, title, preview, step_count, last_modified_time,
-    workspace_uris, status, source, project_id, agent_name,
-    parent_conversation_id, nesting_depth, not_fully_idle, killed,
+    conversation_id,
+    title,
+    preview,
+    step_count,
+    last_modified_time,
+    workspace_uris,
+    status,
+    source,
+    parent_conversation_id,
+    nesting_depth,
+    not_fully_idle,
+    killed,
     last_user_input_time
   FROM conversation_summaries
   ORDER BY last_modified_time DESC
 `;
 
+export interface ProjectGroup {
+  workspace: string;
+  alias?: string;
+  conversations: ConversationSummary[];
+  probes?: ConversationSummary[];
+}
+
 export interface GroupedProjectResponse {
-  groups: Array<{ workspace: string; conversations: ConversationSummary[] }>;
+  groups: ProjectGroup[];
   totalCount: number;
   archivedCount: number;
+  aliases: Record<string, string>;
 }
 
 export class ConversationIndex {
@@ -145,7 +163,9 @@ export class ConversationIndex {
    */
   groupByWorkspace(showArchived = false, includeSubagents = false): GroupedProjectResponse {
     const archivedIds = readArchivedIds();
+    const aliases = readProjectAliases();
     const groups = new Map<string, ConversationSummary[]>();
+    const probesMap = new Map<string, ConversationSummary[]>();
     let totalCount = 0;
     let archivedCount = 0;
 
@@ -160,13 +180,6 @@ export class ConversationIndex {
         continue;
       }
 
-      // Filter ephemeral test probes (e.g. 'say hi', 'long task') from polluting sidebar project tree
-      const lowerTitle = (c.title || '').trim().toLowerCase();
-      const isProbe = (lowerTitle === 'say hi' || lowerTitle === 'long task') && (c.step_count || 0) <= 4;
-      if (isProbe) {
-        continue;
-      }
-
       totalCount++;
       const isArchived = archivedIds.has(c.conversation_id);
       if (isArchived) {
@@ -178,6 +191,21 @@ export class ConversationIndex {
       }
 
       const key = c.workspace_uris[0] ?? 'unknown';
+
+      // Ephemeral test probes (e.g. 'say hi', 'long task', 'probe' with <= 4 steps)
+      const lowerTitle = (c.title || '').trim().toLowerCase();
+      const isProbe = (lowerTitle === 'say hi' || lowerTitle === 'long task' || lowerTitle === 'probe') && (c.step_count || 0) <= 4;
+
+      if (isProbe) {
+        const pArr = probesMap.get(key) ?? [];
+        pArr.push({
+          ...c,
+          is_archived: isArchived
+        });
+        probesMap.set(key, pArr);
+        continue;
+      }
+
       const arr = groups.get(key) ?? [];
       arr.push({
         ...c,
@@ -186,15 +214,30 @@ export class ConversationIndex {
       groups.set(key, arr);
     }
 
-    const groupList = [...groups.entries()].map(([workspace, conversations]) => ({
-      workspace,
-      conversations
-    }));
+    // Ensure groups exist for workspaces that only have probes
+    for (const key of probesMap.keys()) {
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+    }
+
+    const groupList: ProjectGroup[] = [...groups.entries()].map(([workspace, conversations]) => {
+      const cleanW = workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace;
+      const alias = aliases.get(cleanW) || aliases.get(workspace);
+      const probes = probesMap.get(workspace) || [];
+      return {
+        workspace,
+        alias,
+        conversations,
+        probes
+      };
+    });
 
     return {
       groups: groupList,
       totalCount,
-      archivedCount
+      archivedCount,
+      aliases: Object.fromEntries(aliases.entries())
     };
   }
 

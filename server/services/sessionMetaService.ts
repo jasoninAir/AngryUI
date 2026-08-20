@@ -179,3 +179,49 @@ export function deleteLocalSessionFiles(conversationId: string): void {
     }
   }
 }
+
+function getProjectAliasesPath(): string {
+  const dir = getConfig().webuiHome;
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  return path.join(dir, 'project-aliases.json');
+}
+
+export function readProjectAliases(): Map<string, string> {
+  const filePath = getProjectAliasesPath();
+  if (!existsSync(filePath)) {
+    return new Map<string, string>();
+  }
+  try {
+    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
+    return new Map(Object.entries(raw || {}));
+  } catch {
+    return new Map<string, string>();
+  }
+}
+
+export function setProjectAlias(workspace: string, alias: string): void {
+  const filePath = getProjectAliasesPath();
+  const dir = path.dirname(filePath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  const current = readProjectAliases();
+  const cleanW = workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace;
+  if (alias && alias.trim()) {
+    current.set(cleanW, alias.trim());
+  } else {
+    current.delete(cleanW);
+  }
+  const obj = Object.fromEntries(current.entries());
+  try {
+    writeFileSync(filePath, JSON.stringify(obj, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save project alias:', e);
+  }
+}
+
+export function deleteProjectAlias(workspace: string): void {
+  setProjectAlias(workspace, '');
+}

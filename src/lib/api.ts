@@ -43,10 +43,18 @@ export async function loginWithToken(token: string): Promise<{ ok: boolean; auth
   return { ok: true, authenticated: true, token: data.token || token };
 }
 
+export interface ProjectGroupItem {
+  workspace: string;
+  alias?: string;
+  conversations: ConversationSummary[];
+  probes?: ConversationSummary[];
+}
+
 export interface ProjectsResponse {
-  groups: Array<{ workspace: string; conversations: ConversationSummary[] }>;
+  groups: ProjectGroupItem[];
   totalCount?: number;
   archivedCount?: number;
+  aliases?: Record<string, string>;
 }
 
 export interface HistoryResponse {
@@ -113,6 +121,26 @@ export async function deleteConversation(id: string): Promise<{ success: boolean
     method: 'DELETE'
   });
   if (!res.ok) throw new Error(`Failed to delete conversation: ${res.status}`);
+  return res.json();
+}
+
+export async function saveProjectAlias(workspace: string, alias: string): Promise<{ success: boolean; workspace: string; alias: string }> {
+  const res = await authFetch('/api/projects/alias', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspace, alias })
+  });
+  if (!res.ok) throw new Error(`Failed to save project alias: ${res.status}`);
+  return res.json();
+}
+
+export async function clearWorkspaceProbes(workspace?: string): Promise<{ success: boolean; deletedCount: number }> {
+  const res = await authFetch('/api/projects/clear-probes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspace })
+  });
+  if (!res.ok) throw new Error(`Failed to clear probes: ${res.status}`);
   return res.json();
 }
 

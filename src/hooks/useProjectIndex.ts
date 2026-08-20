@@ -3,14 +3,18 @@ import {
   fetchProjects,
   renameConversation,
   archiveConversation,
-  deleteConversation
+  deleteConversation,
+  saveProjectAlias,
+  clearWorkspaceProbes,
+  type ProjectGroupItem
 } from '@/lib/api';
 import type { ConversationSummary } from '@/lib/types';
 
-export type ProjectGroup = { workspace: string; conversations: ConversationSummary[] };
+export type ProjectGroup = ProjectGroupItem;
 
 export function useProjectIndex() {
   const [groups, setGroups] = useState<ProjectGroup[]>([]);
+  const [aliases, setAliases] = useState<Record<string, string>>({});
   const [showArchived, setShowArchived] = useState(false);
   const [archivedCount, setArchivedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -21,6 +25,7 @@ export function useProjectIndex() {
     try {
       const data = await fetchProjects(showArchived, force);
       setGroups(data.groups ?? []);
+      setAliases(data.aliases ?? {});
       setArchivedCount(data.archivedCount ?? 0);
       setTotalCount(data.totalCount ?? 0);
     } catch (e) {
@@ -107,7 +112,8 @@ export function useProjectIndex() {
       setGroups((prev) =>
         prev.map((g) => ({
           ...g,
-          conversations: g.conversations.filter((c) => c.conversation_id !== conversationId)
+          conversations: g.conversations.filter((c) => c.conversation_id !== conversationId),
+          probes: g.probes?.filter((p) => p.conversation_id !== conversationId)
         }))
       );
       await refresh();
@@ -118,8 +124,42 @@ export function useProjectIndex() {
     }
   };
 
+  const setAlias = async (workspace: string, alias: string): Promise<boolean> => {
+    try {
+      await saveProjectAlias(workspace, alias);
+      const cleanW = workspace.startsWith('file://') ? workspace.replace('file://', '') : workspace;
+      setAliases((prev) => ({ ...prev, [cleanW]: alias }));
+      setGroups((prev) =>
+        prev.map((g) => {
+          const gClean = g.workspace.startsWith('file://') ? g.workspace.replace('file://', '') : g.workspace;
+          if (gClean === cleanW || g.workspace === workspace) {
+            return { ...g, alias };
+          }
+          return g;
+        })
+      );
+      await refresh();
+      return true;
+    } catch (e) {
+      console.error('Failed to save project alias:', e);
+      return false;
+    }
+  };
+
+  const clearProbes = async (workspace?: string): Promise<number> => {
+    try {
+      const res = await clearWorkspaceProbes(workspace);
+      await refresh();
+      return res.deletedCount || 0;
+    } catch (e) {
+      console.error('Failed to clear probes:', e);
+      return 0;
+    }
+  };
+
   return {
     groups,
+    aliases,
     archivedCount,
     totalCount,
     showArchived,
@@ -128,6 +168,8 @@ export function useProjectIndex() {
     refresh,
     rename,
     archive,
-    remove
+    remove,
+    setAlias,
+    clearProbes
   };
 }

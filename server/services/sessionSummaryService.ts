@@ -201,7 +201,11 @@ export function upsertConversationSummary(summary: ConversationSummary): void {
         preview = excluded.preview,
         step_count = excluded.step_count,
         last_modified_time = excluded.last_modified_time,
-        workspace_uris = excluded.workspace_uris,
+        workspace_uris = CASE
+          WHEN conversation_summaries.workspace_uris != '' AND conversation_summaries.workspace_uris != '["file:///"]' AND conversation_summaries.workspace_uris != '[]'
+          THEN conversation_summaries.workspace_uris
+          ELSE excluded.workspace_uris
+        END,
         parent_conversation_id = CASE
           WHEN excluded.parent_conversation_id != '' THEN excluded.parent_conversation_id
           ELSE conversation_summaries.parent_conversation_id

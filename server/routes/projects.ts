@@ -3,6 +3,7 @@ import { ConversationIndex } from '../db/conversationIndex';
 import { getConversationHistory } from '../services/historyService';
 import { conversationHub } from '../ws/conversationHub';
 import { listWorkspaceFiles, readWorkspaceFile } from '../services/fileService';
+import { readProjectAliases, setProjectAlias, deleteProjectAlias } from '../services/sessionMetaService';
 
 export function createProjectsRouter(index: ConversationIndex): Router {
   const router = Router();
@@ -102,6 +103,54 @@ export function createProjectsRouter(index: ConversationIndex): Router {
       return res.status(404).json({ error: 'Conversation not found' });
     }
     res.json({ success: true, conversation_id: id, is_archived: archived });
+  });
+
+  // GET /api/projects/aliases
+  router.get('/projects/aliases', (_req, res) => {
+    const map = readProjectAliases();
+    res.json({ aliases: Object.fromEntries(map.entries()) });
+  });
+
+  // POST /api/projects/alias -> { workspace: string, alias: string }
+  router.post('/projects/alias', (req, res) => {
+    const { workspace, alias } = req.body ?? {};
+    if (!workspace || typeof workspace !== 'string') {
+      return res.status(400).json({ error: 'workspace is required' });
+    }
+    setProjectAlias(workspace, typeof alias === 'string' ? alias.trim() : '');
+    res.json({ success: true, workspace, alias: typeof alias === 'string' ? alias.trim() : '' });
+  });
+
+  // DELETE /api/projects/alias -> { workspace: string }
+  router.delete('/projects/alias', (req, res) => {
+    const { workspace } = req.body ?? req.query ?? {};
+    if (!workspace || typeof workspace !== 'string') {
+      return res.status(400).json({ error: 'workspace is required' });
+    }
+    deleteProjectAlias(workspace);
+    res.json({ success: true, workspace });
+  });
+
+  // POST /api/projects/clear-probes -> { workspace?: string }
+  router.post('/projects/clear-probes', (req, res) => {
+    const { workspace } = req.body ?? {};
+    const grouped = index.groupByWorkspace(true, true);
+    let deletedCount = 0;
+
+    for (const g of grouped.groups) {
+      if (workspace && g.workspace !== workspace && !g.workspace.includes(workspace)) {
+        continue;
+      }
+      if (g.probes && g.probes.length > 0) {
+        for (const p of g.probes) {
+          if (index.delete(p.conversation_id)) {
+            deletedCount++;
+          }
+        }
+      }
+    }
+
+    res.json({ success: true, deletedCount });
   });
 
   // DELETE /api/conversations/:id

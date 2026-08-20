@@ -33,7 +33,9 @@ export function Sidebar() {
     archive,
     remove,
     refresh,
-    loading
+    loading,
+    setAlias,
+    clearProbes
   } = useProjectIndex();
 
   const isDragging = isMobile && dragOffset !== null;
@@ -84,10 +86,18 @@ export function Sidebar() {
     const existing = groupMap.get(cleanW);
     if (existing) {
       existing.conversations.push(...g.conversations);
+      if (g.probes) {
+        existing.probes = [...(existing.probes || []), ...g.probes];
+      }
+      if (g.alias && !existing.alias) {
+        existing.alias = g.alias;
+      }
     } else {
       groupMap.set(cleanW, {
         workspace: cleanW,
-        conversations: [...g.conversations]
+        alias: g.alias,
+        conversations: [...g.conversations],
+        probes: g.probes ? [...g.probes] : []
       });
     }
   }
@@ -98,7 +108,8 @@ export function Sidebar() {
     if (!groupMap.has(cleanPinned)) {
       groupMap.set(cleanPinned, {
         workspace: cleanPinned,
-        conversations: []
+        conversations: [],
+        probes: []
       });
     }
   }
@@ -242,13 +253,17 @@ export function Sidebar() {
             <div key={g.workspace}>
               <WorkspaceGroup
                 workspace={g.workspace}
+                alias={g.alias}
                 conversations={g.conversations}
+                probes={g.probes}
                 activeConversationId={activeConversationId}
                 isPinned={isPinned(g.workspace)}
                 onTogglePin={togglePin}
                 onRename={rename}
                 onArchive={archive}
                 onDelete={remove}
+                onSaveAlias={setAlias}
+                onClearProbes={clearProbes}
               />
             </div>
           ))
